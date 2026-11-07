@@ -1,0 +1,152 @@
+@import "tailwindcss";
+
+@theme {
+  --color-canvas: #101012;
+  --color-surface: #17171a;
+  --color-raised: #1f1f23;
+  --color-line: #2a2a30;
+  --color-line-strong: #3a3a42;
+  --color-ink: #ecebe8;
+  --color-muted: #9d9a95;
+  --color-faint: #6d6a66;
+  --color-accent: #d2a862;
+  --color-accent-soft: #3a2f1c;
+  --color-danger: #cf6055;
+  --color-danger-soft: #3a1f1c;
+  --color-positive: #7fa86a;
+
+  --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, monospace;
+
+  --radius-panel: 0.75rem;
+
+  --animate-shake: shake 0.32s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+  --animate-rise: rise 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-fade: fade 0.18s ease-out;
+  --animate-slide-up: slide-up 0.26s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: none;
+  }
+}
+
+@keyframes shake {
+  10%,
+  90% {
+    transform: translateX(-2.5%);
+  }
+  20%,
+  80% {
+    transform: translateX(4%);
+  }
+  30%,
+  50%,
+  70% {
+    transform: translateX(-5%);
+  }
+  40%,
+  60% {
+    transform: translateX(5%);
+  }
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    background-color: var(--color-canvas);
+    color: var(--color-ink);
+    font-family: var(--font-sans);
+    font-feature-settings: "cv11", "ss01";
+    /* The board is the only thing that should ever scroll horizontally, and it never does. */
+    overflow-x: hidden;
+  }
+
+  h1,
+  h2,
+  h3 {
+    letter-spacing: -0.022em;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+    border-radius: 3px;
+  }
+
+  ::selection {
+    background: color-mix(in oklab, var(--color-accent) 35%, transparent);
+  }
+
+  dialog::backdrop {
+    background: rgba(6, 6, 8, 0.72);
+  }
+}
+
+@layer components {
+  .panel {
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: var(--radius-panel);
+  }
+
+  /* Small caps label used for section headers throughout the game screen. */
+  .eyebrow {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--color-faint);
+  }
+
+  .numeric {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+  }
+
+  .board-coordinate {
+    font-family: var(--font-mono);
+    font-weight: 500;
+    opacity: 0.72;
+    line-height: 1;
+    pointer-events: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
