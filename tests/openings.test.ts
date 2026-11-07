@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ChessEngine } from "@/lib/chess/engine";
-import { OPENINGS } from "@/constants/openings";
+import { CHECKMATES, OPENINGS } from "@/constants/openings";
 
 describe("showcase openings", () => {
   for (const [id, opening] of Object.entries(OPENINGS)) {
@@ -12,9 +12,11 @@ describe("showcase openings", () => {
     });
   }
 
-  it("Scholar's Mate ends in checkmate for White", () => {
-    const engine = new ChessEngine();
-    for (const [from, to] of OPENINGS.scholarsMate.line) engine.move(from, to);
-    expect(engine.snapshot().result).toEqual({ kind: "win", winner: "w", reason: "checkmate" });
-  });
+  for (const mate of CHECKMATES) {
+    it(`${mate.name} ends in checkmate`, () => {
+      const engine = new ChessEngine();
+      for (const [from, to] of mate.line) expect(engine.move(from, to), `${mate.name}: ${from}-${to}`).not.toBeNull();
+      expect(engine.snapshot().result?.reason).toBe("checkmate");
+    });
+  }
 });

@@ -2,8 +2,7 @@ import Link from "next/link";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 import { Navbar } from "@/components/Navbar";
 import { ModeChooser } from "@/components/ModeChooser";
-import { ShowcaseBoard } from "@/components/chess/ShowcaseBoard";
-import { OPENINGS } from "@/constants/openings";
+import { HeroBoard } from "@/components/chess/HeroBoard";
 import { ModeCards } from "@/components/play/ModeCards";
 import { Footer } from "@/components/Footer";
 
@@ -62,7 +61,7 @@ export default function HomePage() {
           </div>
 
           <div className="mx-auto w-full animate-enter lg:max-w-[44rem]" style={{ animationDelay: "120ms" }}>
-            <ShowcaseBoard opening={OPENINGS.scholarsMate} />
+            <HeroBoard />
           </div>
         </section>
 

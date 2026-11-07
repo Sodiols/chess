@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useEffectEvent, useRef, useState } from "react";
 import clsx from "clsx";
 import type { Color } from "@/types";
 import { ChessEngine, opposite } from "@/lib/chess/engine";
@@ -24,6 +24,8 @@ interface ShowcaseBoardProps {
   caption?: boolean;
   /** Sweeps the camera slowly from side to side (a search in progress). */
   sweeping?: boolean;
+  /** Called once the last move of the line has been played. */
+  onFinish?: () => void;
   className?: string;
 }
 
@@ -36,11 +38,13 @@ export function ShowcaseBoard({
   orientation = "w",
   caption = true,
   sweeping = false,
+  onFinish,
   className,
 }: ShowcaseBoardProps) {
   const { settings } = useGameSettings();
   const stageRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState(START);
+  const finished = useEffectEvent(() => onFinish?.());
 
   useEffect(() => {
     const engine = new ChessEngine();
@@ -51,6 +55,7 @@ export function ShowcaseBoard({
       setPosition(engine.snapshot());
       ply += 1;
       if (ply < opening.line.length) timer = window.setTimeout(step, MOVE_EVERY_MS);
+      else finished();
     }, FIRST_MOVE_MS);
     return () => window.clearTimeout(timer);
   }, [opening]);
