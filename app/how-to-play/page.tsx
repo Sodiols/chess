@@ -44,7 +44,8 @@ const TOPICS: Topic[] = [
         },
       },
       {
-        caption: "The bishop travels diagonally and stays on one colour forever.",
+        caption:
+          "The bishop travels diagonally and stays on one colour forever.",
         diagram: {
           fen: "4k3/8/8/8/4B3/8/8/4K3 w - - 0 1",
           from: "e4",
@@ -114,7 +115,8 @@ const TOPICS: Topic[] = [
     ],
     diagrams: [
       {
-        caption: "Checkmate: the black king is attacked and every escape square is covered.",
+        caption:
+          "Checkmate: the black king is attacked and every escape square is covered.",
         diagram: {
           fen: "6k1/5ppp/8/8/8/8/8/4K1R1 b - - 0 1",
           marks: ["g8", "g1"],
@@ -179,7 +181,8 @@ const TOPICS: Topic[] = [
     ],
     diagrams: [
       {
-        caption: "The pawn on b7 promotes by stepping to b8 or capturing on a8 or c8.",
+        caption:
+          "The pawn on b7 promotes by stepping to b8 or capturing on a8 or c8.",
         diagram: {
           fen: "r1r1k3/1P6/8/8/8/8/8/4K3 w - - 0 1",
           from: "b7",
@@ -207,57 +210,78 @@ export default function HowToPlayPage() {
     <>
       <Navbar />
 
-      <main className="mx-auto max-w-4xl px-4 pt-10 pb-16 sm:px-5 lg:pt-14">
-        <h1 className="animate-enter text-[2.5rem] leading-[1.02] font-extrabold sm:text-[3.5rem]">How to play chess</h1>
-        <p className="mt-4 max-w-2xl text-[1.0625rem] leading-relaxed text-muted">
-          Everything you need to sit down and play a full game. Beginner mode shows
-          all of this on the board as you go, so you do not have to memorise it.
+      <main className="mx-auto max-w-[80rem] px-4 pt-10 pb-24 sm:px-6 lg:px-8 lg:pt-14">
+        <h1 className="animate-enter text-[2.5rem] leading-[1.02] font-extrabold sm:text-[3.5rem]">
+          How to play chess
+        </h1>
+        <p
+          className="mt-5 max-w-2xl animate-enter text-lg leading-relaxed text-muted"
+          style={{ animationDelay: "60ms" }}
+        >
+          Everything you need to sit down and play a full game. Beginner mode
+          shows all of this on the board as you go, so you do not have to
+          memorise it.
         </p>
 
-        <nav aria-label="Sections" className="mt-8 flex flex-wrap gap-2">
-          {TOPICS.map((topic) => (
-            <a
-              key={topic.id}
-              href={`#${topic.id}`}
-              className="press rounded-md bg-raised px-3.5 py-2 text-sm font-medium text-muted hover:bg-[#282724] hover:text-ink"
-            >
-              {topic.heading}
-            </a>
-          ))}
-        </nav>
+        <div className="mt-14 grid gap-x-16 gap-y-10 lg:grid-cols-[13rem_minmax(0,1fr)]">
+          <nav
+            aria-label="Sections"
+            className="animate-enter lg:sticky lg:top-24 lg:self-start"
+            style={{ animationDelay: "120ms" }}
+          >
+            <ul className="flex flex-wrap gap-2 lg:flex-col lg:gap-0.5">
+              {TOPICS.map((topic) => (
+                <li key={topic.id}>
+                  <a
+                    href={`#${topic.id}`}
+                    className="press block rounded-md bg-raised px-3.5 py-2 text-[0.9375rem] font-medium text-muted hover:bg-[#282724] hover:text-ink lg:bg-transparent"
+                  >
+                    {topic.heading}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </nav>
 
-        <div className="mt-16 space-y-20">
-          {TOPICS.map((topic) => (
-            <section key={topic.id} id={topic.id} className="scroll-mt-20">
-              <h2 className="reveal text-2xl font-extrabold sm:text-[2rem]">{topic.heading}</h2>
+          <div className="space-y-24">
+            {TOPICS.map((topic) => (
+              <section key={topic.id} id={topic.id} className="scroll-mt-24">
+                <h2 className="reveal text-[1.75rem] leading-tight font-extrabold sm:text-[2.25rem]">
+                  {topic.heading}
+                </h2>
 
-              <div className="mt-4 max-w-2xl space-y-3 text-base leading-relaxed text-ink">
-                {topic.body.map((paragraph) => (
-                  <p key={paragraph}>{paragraph}</p>
-                ))}
-              </div>
-
-              {topic.diagrams.length > 0 && (
-                <ul
-                  className={
-                    topic.diagrams.length > 2
-                      ? "mt-7 grid gap-6 sm:grid-cols-2 lg:grid-cols-3"
-                      : "mt-7 grid gap-6 sm:grid-cols-2"
-                  }
-                >
-                  {topic.diagrams.map(({ caption, diagram }) => (
-                    <li key={caption} className="reveal">
-                      <MiniBoard {...diagram} />
-                      <p className="mt-3 text-sm leading-snug text-muted">{caption}</p>
-                    </li>
+                <div className="reveal mt-5 max-w-2xl space-y-4 text-[1.0625rem] leading-relaxed text-ink">
+                  {topic.body.map((paragraph) => (
+                    <p key={paragraph}>{paragraph}</p>
                   ))}
-                </ul>
-              )}
-            </section>
-          ))}
+                </div>
+
+                {topic.diagrams.length > 0 && (
+                  <ul
+                    className={
+                      topic.diagrams.length > 2
+                        ? "mt-9 grid gap-6 sm:grid-cols-2 xl:grid-cols-3"
+                        : "mt-9 grid max-w-[44rem] gap-6 sm:grid-cols-2"
+                    }
+                  >
+                    {topic.diagrams.map(({ caption, diagram }) => (
+                      <li key={caption} className="reveal group">
+                        <div className="transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:-translate-y-1">
+                          <MiniBoard {...diagram} />
+                        </div>
+                        <p className="mt-3.5 text-[0.9375rem] leading-snug text-muted">
+                          {caption}
+                        </p>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </section>
+            ))}
+          </div>
         </div>
 
-        <div className="mt-20">
+        <div className="mt-24 lg:pl-[17rem]">
           <Link
             href="/play"
             className="press inline-flex h-13 items-center rounded-md bg-accent px-7 text-base font-bold text-[#1f170a] hover:bg-[#e2b970]"

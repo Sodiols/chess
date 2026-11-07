@@ -8,6 +8,7 @@ import { siteUrl, useAuth } from "@/lib/auth/session";
 import { authErrorCode } from "@/lib/auth/errors";
 import { validateEmail } from "@/lib/auth/validation";
 import { Button } from "@/components/ui/Button";
+import { OPENINGS } from "@/constants/openings";
 import { AuthShell, Field, FormAlert, Spinner } from "./AuthShell";
 import { NotConfigured } from "./NotConfigured";
 
@@ -29,7 +30,7 @@ export function LoginForm({ next }: { next: string }) {
   if (auth.status === "unconfigured") return <NotConfigured />;
   if (auth.status === "signed-in") {
     return (
-      <AuthShell title="Log in">
+      <AuthShell opening={OPENINGS.queensGambit} title="Log in">
         <Spinner label="Signed in. Redirecting…" />
       </AuthShell>
     );
@@ -65,7 +66,7 @@ export function LoginForm({ next }: { next: string }) {
   };
 
   return (
-    <AuthShell
+    <AuthShell opening={OPENINGS.queensGambit}
       title="Log in"
       description="Welcome back. Log in to play online."
       footer={
@@ -77,7 +78,7 @@ export function LoginForm({ next }: { next: string }) {
         </>
       }
     >
-      <form onSubmit={submit} noValidate className="space-y-4">
+      <form onSubmit={submit} noValidate className="space-y-5">
         <Field
           label="Email"
           type="email"
@@ -99,7 +100,7 @@ export function LoginForm({ next }: { next: string }) {
           error={fieldErrors.password}
         />
         <div className="-mt-1 text-right">
-          <Link href="/forgot-password" className="text-xs text-muted hover:text-ink hover:underline">
+          <Link href="/forgot-password" className="text-sm text-muted hover:text-ink hover:underline">
             Forgot password?
           </Link>
         </div>

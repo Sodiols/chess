@@ -1,14 +1,27 @@
 "use client";
 
-import { useEffect, useId, useMemo, useState, useSyncExternalStore } from "react";
+import {
+  useEffect,
+  useId,
+  useMemo,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import { useHostedRoom } from "@/hooks/useHostedRoom";
 import { useRoomBrowser } from "@/hooks/useRoomBrowser";
 import { api } from "@/lib/multiplayer/client";
 import { onlinePreferences } from "@/lib/multiplayer/preferences";
-import { ONLINE_TIME_CONTROLS, onlineTimeControlById } from "@/lib/multiplayer/timeControls";
-import { errorMessage, type Profile, type RoomSummary } from "@/lib/multiplayer/types";
+import {
+  ONLINE_TIME_CONTROLS,
+  onlineTimeControlById,
+} from "@/lib/multiplayer/timeControls";
+import {
+  errorMessage,
+  type Profile,
+  type RoomSummary,
+} from "@/lib/multiplayer/types";
 import { formatTimeControl } from "@/lib/chess/format";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
@@ -17,6 +30,8 @@ import { TextField } from "@/components/ui/TextField";
 import { Toggle } from "@/components/ui/Toggle";
 import { CopyIcon, LockIcon, RefreshIcon } from "@/components/ui/icons";
 import { TimeControlPicker } from "@/components/multiplayer/TimeControlPicker";
+import { ShowcaseBoard } from "@/components/chess/ShowcaseBoard";
+import { OPENINGS } from "@/constants/openings";
 import { ResumeBanner } from "@/components/multiplayer/OnlineGate";
 
 const CODE_PATTERN = /^[A-HJ-NP-Z2-9]{6}$/;
@@ -31,7 +46,8 @@ export function RoomsLobby({ profile }: { profile: Profile }) {
   // the account has loaded, after the browser's own anchor jump has passed.
   useEffect(() => {
     const target = window.location.hash.slice(1);
-    if (target) document.getElementById(target)?.scrollIntoView({ block: "start" });
+    if (target)
+      document.getElementById(target)?.scrollIntoView({ block: "start" });
   }, []);
 
   if (hosted.room?.status === "waiting" || hosted.room?.status === "started") {
@@ -48,13 +64,18 @@ export function RoomsLobby({ profile }: { profile: Profile }) {
   }
 
   return (
-    <div className="space-y-12">
-      <div className="grid gap-8 lg:grid-cols-[1.2fr_1fr] lg:gap-10">
-        <section aria-labelledby="create-heading" className="panel p-5 sm:p-6">
-          <h2 id="create-heading" className="text-lg font-semibold">
+    <div className="space-y-24">
+      <div className="grid items-start gap-6 lg:grid-cols-[1.25fr_1fr]">
+        <section
+          aria-labelledby="create-heading"
+          className="animate-rise scroll-mt-24 rounded-lg bg-surface p-6 sm:p-8"
+        >
+          <h2 id="create-heading" className="text-2xl font-extrabold">
             Create a room
           </h2>
-          <p className="mt-1 text-sm text-muted">Share the room ID and password with your opponent.</p>
+          <p className="mt-2 text-[0.9375rem] text-muted">
+            Share the room ID and password with your opponent.
+          </p>
           {hosted.phase === "restoring" ? (
             <p className="mt-5 text-sm text-muted" role="status">
               Checking for a room you already host…
@@ -76,11 +97,17 @@ export function RoomsLobby({ profile }: { profile: Profile }) {
           )}
         </section>
 
-        <section aria-labelledby="join-heading" className="panel p-5 sm:p-6">
-          <h2 id="join-heading" className="text-lg font-semibold">
+        <section
+          aria-labelledby="join-heading"
+          className="animate-rise scroll-mt-24 rounded-lg bg-surface p-6 sm:p-8"
+          style={{ animationDelay: "80ms" }}
+        >
+          <h2 id="join-heading" className="text-2xl font-extrabold">
             Join a room
           </h2>
-          <p className="mt-1 text-sm text-muted">Paste the ID you were given.</p>
+          <p className="mt-2 text-[0.9375rem] text-muted">
+            Paste the ID you were given.
+          </p>
           <JoinRoomForm initialCode="" onJoined={goToGame} />
         </section>
       </div>
@@ -93,7 +120,13 @@ export function RoomsLobby({ profile }: { profile: Profile }) {
         title={`Join room ${joinCode ?? ""}`}
         description="Enter the password the host shared with you."
       >
-        {joinCode && <JoinRoomForm initialCode={joinCode} onJoined={goToGame} autoFocusPassword />}
+        {joinCode && (
+          <JoinRoomForm
+            initialCode={joinCode}
+            onJoined={goToGame}
+            autoFocusPassword
+          />
+        )}
       </Dialog>
     </div>
   );
@@ -126,7 +159,8 @@ function CreateRoomForm({
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
     if (busy) return;
-    const invalid = password.length < 4 || password.length > 64 ? "invalid_password" : null;
+    const invalid =
+      password.length < 4 || password.length > 64 ? "invalid_password" : null;
     setPasswordError(invalid);
     if (invalid) return;
     void onCreate({
@@ -140,11 +174,20 @@ function CreateRoomForm({
   };
 
   return (
-    <form onSubmit={submit} noValidate className="mt-5 space-y-5">
+    <form onSubmit={submit} noValidate className="mt-7 space-y-6">
       <div className="grid gap-3 sm:grid-cols-2">
-        <TextField label="Room name" value={name} placeholder={`${username}'s room`} maxLength={40} onChange={setName} />
+        <TextField
+          label="Room name"
+          value={name}
+          placeholder={`${username}'s room`}
+          maxLength={40}
+          onChange={setName}
+        />
         <div>
-          <label htmlFor={passwordId} className="eyebrow mb-2 block">
+          <label
+            htmlFor={passwordId}
+            className="mb-2 block text-sm font-semibold"
+          >
             Password
           </label>
           <input
@@ -157,17 +200,28 @@ function CreateRoomForm({
             aria-describedby={`${passwordId}-hint`}
             onChange={(event) => setPassword(event.target.value)}
             className={clsx(
-              "h-10 w-full rounded-lg border bg-raised px-3 text-sm hover:border-line-strong focus:border-accent focus:outline-none",
+              "h-12 w-full rounded-md border bg-canvas px-3.5 text-[0.9375rem] hover:border-line-strong focus:border-accent focus:outline-none",
               passwordError ? "border-[#8a3d33]" : "border-line",
             )}
           />
-          <p id={`${passwordId}-hint`} className={clsx("mt-1.5 text-xs", passwordError ? "text-[#f0a49b]" : "text-faint")}>
-            {passwordError ? errorMessage(passwordError) : "4–64 characters. Share it with your opponent."}
+          <p
+            id={`${passwordId}-hint`}
+            className={clsx(
+              "mt-2 text-[0.8125rem]",
+              passwordError ? "text-[#f4aaa1]" : "text-faint",
+            )}
+          >
+            {passwordError
+              ? errorMessage(passwordError)
+              : "4–64 characters. Share it with your opponent."}
           </p>
         </div>
       </div>
 
-      <TimeControlPicker value={preset.id} onChange={(timeControl) => onlinePreferences.update({ timeControl })} />
+      <TimeControlPicker
+        value={preset.id}
+        onChange={(timeControl) => onlinePreferences.update({ timeControl })}
+      />
 
       <OptionGroup<"w" | "b" | "random">
         legend="You play"
@@ -189,12 +243,19 @@ function CreateRoomForm({
       />
 
       {error && (
-        <p role="alert" className="text-sm text-[#f0a49b]">
+        <p role="alert" className="text-sm text-[#f4aaa1]">
           {errorMessage(error)}
         </p>
       )}
 
-      <Button type="submit" variant="primary" size="lg" block disabled={busy} aria-busy={busy}>
+      <Button
+        type="submit"
+        variant="primary"
+        size="lg"
+        block
+        disabled={busy}
+        aria-busy={busy}
+      >
         {busy ? "Creating room…" : "Create room"}
       </Button>
     </form>
@@ -241,9 +302,9 @@ function JoinRoomForm({
   };
 
   return (
-    <form onSubmit={submit} noValidate className="mt-5 space-y-4">
+    <form onSubmit={submit} noValidate className="mt-7 space-y-5">
       <div>
-        <label htmlFor={codeId} className="eyebrow mb-2 block">
+        <label htmlFor={codeId} className="mb-2 block text-sm font-semibold">
           Room ID
         </label>
         <input
@@ -255,11 +316,14 @@ function JoinRoomForm({
           autoComplete="off"
           autoCapitalize="characters"
           spellCheck={false}
-          className="numeric h-10 w-full rounded-lg border border-line bg-raised px-3 text-sm tracking-[0.2em] uppercase hover:border-line-strong focus:border-accent focus:outline-none"
+          className="numeric h-12 w-full rounded-md border border-line bg-canvas px-3.5 text-lg tracking-[0.3em] uppercase hover:border-line-strong focus:border-accent focus:outline-none"
         />
       </div>
       <div>
-        <label htmlFor={passwordId} className="eyebrow mb-2 block">
+        <label
+          htmlFor={passwordId}
+          className="mb-2 block text-sm font-semibold"
+        >
           Room password
         </label>
         <input
@@ -269,15 +333,22 @@ function JoinRoomForm({
           autoFocus={autoFocusPassword}
           autoComplete="off"
           onChange={(event) => setPassword(event.target.value)}
-          className="h-10 w-full rounded-lg border border-line bg-raised px-3 text-sm hover:border-line-strong focus:border-accent focus:outline-none"
+          className="h-12 w-full rounded-md border border-line bg-canvas px-3.5 text-[0.9375rem] hover:border-line-strong focus:border-accent focus:outline-none"
         />
       </div>
       {error && (
-        <p role="alert" className="text-sm text-[#f0a49b]">
+        <p role="alert" className="text-sm text-[#f4aaa1]">
           {errorMessage(error)}
         </p>
       )}
-      <Button type="submit" variant="primary" block disabled={busy} aria-busy={busy}>
+      <Button
+        type="submit"
+        variant="primary"
+        size="lg"
+        block
+        disabled={busy}
+        aria-busy={busy}
+      >
         {busy ? "Joining…" : "Join room"}
       </Button>
     </form>
@@ -304,7 +375,9 @@ function HostedRoom({
     `Join my Gambit chess room "${room.name}"`,
     `Room ID: ${room.code}`,
     password ? `Password: ${password}` : null,
-    typeof window === "undefined" ? null : `${window.location.origin}/play/rooms`,
+    typeof window === "undefined"
+      ? null
+      : `${window.location.origin}/play/rooms`,
   ]
     .filter(Boolean)
     .join("\n");
@@ -319,70 +392,114 @@ function HostedRoom({
     }
   };
 
-  const colorLabel = room.hostColor === "random" ? "Random" : room.hostColor === "w" ? "White" : "Black";
+  const colorLabel =
+    room.hostColor === "random"
+      ? "Random"
+      : room.hostColor === "w"
+        ? "White"
+        : "Black";
 
   return (
-    <div className="mx-auto max-w-lg text-center" aria-live="polite">
-      <p className="eyebrow">{room.status === "started" ? "Opponent joined" : "Waiting for player to join…"}</p>
-      <h2 className="mt-2 text-xl font-semibold">{room.name}</h2>
-
-      <div className="mt-6 rounded-lg border border-line bg-surface p-5">
-        <p className="eyebrow">Room ID</p>
-        <p className="numeric mt-1 text-4xl font-semibold tracking-[0.25em] text-accent">{room.code}</p>
-        <dl className="mt-5 grid grid-cols-3 gap-3 border-t border-line pt-4 text-sm">
-          <div>
-            <dt className="eyebrow">Host</dt>
-            <dd className="mt-0.5 truncate">{room.hostName}</dd>
-          </div>
-          <div>
-            <dt className="eyebrow">Time</dt>
-            <dd className="numeric mt-0.5">{formatTimeControl(room.initialMs, room.incrementMs)}</dd>
-          </div>
-          <div>
-            <dt className="eyebrow">You play</dt>
-            <dd className="mt-0.5">{colorLabel}</dd>
-          </div>
-        </dl>
-      </div>
-
-      <div className="mt-5 grid gap-2 sm:grid-cols-2">
-        <Button onClick={() => void copy("id")}>
-          <CopyIcon />
-          {copied === "id" ? "Copied" : "Copy room ID"}
-        </Button>
-        <Button onClick={() => void copy("invite")}>
-          <CopyIcon />
-          {copied === "invite" ? "Copied" : "Copy invite details"}
-        </Button>
-      </div>
-      <p className="mt-3 text-xs text-faint">
-        {password
-          ? "The invite includes the password you just set. Gambit stores only a hash of it."
-          : "Gambit stores only a hash of the room password, so it can't be shown again after a refresh. Share the password you chose when creating the room."}
-      </p>
-
-      <span className="mt-8 inline-flex items-center gap-2 text-sm text-muted">
-        <span aria-hidden className="size-2 animate-pulse rounded-full bg-accent" />
-        {room.status === "started" ? "Starting game…" : "Waiting for an opponent"}
-      </span>
-
-      {unreachable && room.status === "waiting" && (
-        <p role="status" className="mt-4 text-xs text-[#f0a49b]">
-          Can&rsquo;t reach the server. Retrying — the room stays open for two minutes without a connection.
+    <div
+      className="grid items-center gap-12 lg:grid-cols-[minmax(0,34rem)_minmax(0,1fr)] lg:gap-16"
+      aria-live="polite"
+    >
+      <div className="animate-rise">
+        <p className="flex items-center gap-2.5 text-[0.9375rem] text-muted">
+          <span
+            aria-hidden
+            className="size-2.5 animate-pulse rounded-full bg-accent"
+          />
+          {room.status === "started"
+            ? "Opponent joined. Starting game…"
+            : "Waiting for player to join…"}
         </p>
-      )}
-      {error && (
-        <p role="alert" className="mt-4 text-sm text-[#f0a49b]">
-          {errorMessage(error)}
-        </p>
-      )}
-      {room.status === "waiting" && (
-        <div className="mt-6">
-          <Button variant="ghost" onClick={onCancel} disabled={cancelling} aria-busy={cancelling}>
-            {cancelling ? "Cancelling…" : error ? "Try cancelling again" : "Cancel room"}
+        <h2 className="mt-3 text-[2rem] leading-tight font-extrabold">
+          {room.name}
+        </h2>
+
+        <div className="mt-8 overflow-hidden rounded-lg bg-surface">
+          <div className="px-6 pt-6 pb-7">
+            <p className="text-sm text-muted">Room ID</p>
+            <p
+              translate="no"
+              className="numeric mt-1 text-[clamp(2.5rem,6vw,3.75rem)] leading-none font-semibold tracking-[0.18em] text-accent"
+            >
+              {room.code}
+            </p>
+          </div>
+          <dl className="grid grid-cols-3 gap-px bg-line text-[0.9375rem]">
+            <div className="bg-raised px-6 py-4">
+              <dt className="text-sm text-muted">Host</dt>
+              <dd className="mt-1 truncate font-semibold">{room.hostName}</dd>
+            </div>
+            <div className="bg-raised px-6 py-4">
+              <dt className="text-sm text-muted">Time</dt>
+              <dd className="mt-1 font-semibold tabular-nums">
+                {formatTimeControl(room.initialMs, room.incrementMs)}
+              </dd>
+            </div>
+            <div className="bg-raised px-6 py-4">
+              <dt className="text-sm text-muted">You play</dt>
+              <dd className="mt-1 font-semibold">{colorLabel}</dd>
+            </div>
+          </dl>
+        </div>
+
+        <div className="mt-6 grid gap-2 sm:grid-cols-2">
+          <Button size="lg" onClick={() => void copy("id")}>
+            <CopyIcon />
+            {copied === "id" ? "Copied" : "Copy room ID"}
+          </Button>
+          <Button size="lg" onClick={() => void copy("invite")}>
+            <CopyIcon />
+            {copied === "invite" ? "Copied" : "Copy invite details"}
           </Button>
         </div>
-      )}
+        <p className="mt-4 text-sm leading-relaxed text-faint">
+          {password
+            ? "The invite includes the password you just set. Gambit stores only a hash of it."
+            : "Gambit stores only a hash of the room password, so it can't be shown again after a refresh. Share the password you chose when creating the room."}
+        </p>
+
+        {unreachable && room.status === "waiting" && (
+          <p role="status" className="mt-4 text-sm text-[#f4aaa1]">
+            Can&rsquo;t reach the server. Retrying — the room stays open for two
+            minutes without a connection.
+          </p>
+        )}
+        {error && (
+          <p role="alert" className="mt-4 text-sm text-[#f4aaa1]">
+            {errorMessage(error)}
+          </p>
+        )}
+        {room.status === "waiting" && (
+          <div className="mt-6">
+            <Button
+              variant="ghost"
+              onClick={onCancel}
+              disabled={cancelling}
+              aria-busy={cancelling}
+            >
+              {cancelling
+                ? "Cancelling…"
+                : error
+                  ? "Try cancelling again"
+                  : "Cancel room"}
+            </Button>
+          </div>
+        )}
+      </div>
+
+      <div className="hidden lg:block">
+        <ShowcaseBoard
+          opening={OPENINGS.london}
+          orientation={room.hostColor === "b" ? "b" : "w"}
+          sweeping={room.status === "waiting"}
+          caption={false}
+          className="mx-auto max-w-[38rem]"
+        />
+      </div>
     </div>
   );
 }
@@ -396,10 +513,18 @@ function RoomBrowser({ onJoin }: { onJoin: (code: string) => void }) {
   const visible = useMemo(() => {
     const search = query.trim().toUpperCase();
     return rooms.filter((room) => {
-      if (search && !room.code.includes(search) && !room.name.toUpperCase().includes(search)) return false;
+      if (
+        search &&
+        !room.code.includes(search) &&
+        !room.name.toUpperCase().includes(search)
+      )
+        return false;
       if (timeFilter === "all") return true;
       const preset = onlineTimeControlById(timeFilter);
-      return room.initialMs === preset.control.initialMs && room.incrementMs === preset.control.incrementMs;
+      return (
+        room.initialMs === preset.control.initialMs &&
+        room.incrementMs === preset.control.incrementMs
+      );
     });
   }, [query, rooms, timeFilter]);
 
@@ -407,15 +532,22 @@ function RoomBrowser({ onJoin }: { onJoin: (code: string) => void }) {
     <section aria-labelledby="browser-heading">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 id="browser-heading" className="text-lg font-semibold">
+          <h2
+            id="browser-heading"
+            className="text-[2rem] leading-tight font-extrabold"
+          >
             Open rooms
           </h2>
-          <p className="mt-1 flex items-center gap-2 text-sm text-muted">
+          <p className="mt-2 flex items-center gap-2 text-[0.9375rem] text-muted">
             <span
               aria-hidden
               className={clsx(
-                "size-1.5 rounded-full",
-                live === "live" ? "bg-positive" : live === "offline" ? "bg-[#f0a49b]" : "bg-faint",
+                "size-2 rounded-full",
+                live === "live"
+                  ? "bg-positive"
+                  : live === "offline"
+                    ? "bg-[#f0a49b]"
+                    : "bg-faint",
               )}
             />
             {live === "live"
@@ -425,13 +557,18 @@ function RoomBrowser({ onJoin }: { onJoin: (code: string) => void }) {
                 : "Connecting to live updates…"}
           </p>
         </div>
-        <Button size="sm" onClick={() => void refresh()} disabled={status === "loading"} aria-busy={status === "loading"}>
+        <Button
+          size="sm"
+          onClick={() => void refresh()}
+          disabled={status === "loading"}
+          aria-busy={status === "loading"}
+        >
           <RefreshIcon />
           {status === "loading" ? "Refreshing…" : "Refresh rooms"}
         </Button>
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-2">
+      <div className="mt-6 flex flex-wrap gap-2">
         <label htmlFor={searchId} className="sr-only">
           Search by room ID
         </label>
@@ -440,7 +577,7 @@ function RoomBrowser({ onJoin }: { onJoin: (code: string) => void }) {
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Search by room ID or name"
-          className="h-9 min-w-0 flex-1 rounded-lg border border-line bg-raised px-3 text-sm hover:border-line-strong focus:border-accent focus:outline-none sm:max-w-xs"
+          className="h-11 min-w-0 flex-1 rounded-md border border-line bg-surface px-3.5 text-[0.9375rem] hover:border-line-strong focus:border-accent focus:outline-none sm:max-w-sm"
         />
         <label className="sr-only" htmlFor={`${searchId}-time`}>
           Filter by time control
@@ -449,7 +586,7 @@ function RoomBrowser({ onJoin }: { onJoin: (code: string) => void }) {
           id={`${searchId}-time`}
           value={timeFilter}
           onChange={(event) => setTimeFilter(event.target.value)}
-          className="h-9 rounded-lg border border-line bg-raised px-2.5 text-sm hover:border-line-strong focus:border-accent focus:outline-none"
+          className="h-11 rounded-md border border-line bg-surface px-3 text-[0.9375rem] text-ink hover:border-line-strong focus:border-accent focus:outline-none"
         >
           <option value="all">All time controls</option>
           {ONLINE_TIME_CONTROLS.map((entry) => (
@@ -461,14 +598,14 @@ function RoomBrowser({ onJoin }: { onJoin: (code: string) => void }) {
       </div>
 
       {status === "error" && "error" in rest && (
-        <p role="alert" className="mt-4 text-sm text-[#f0a49b]">
+        <p role="alert" className="mt-4 text-sm text-[#f4aaa1]">
           {errorMessage(rest.error)}
         </p>
       )}
 
       {visible.length === 0 ? (
-        <div className="mt-5 rounded-lg border border-dashed border-line px-4 py-10 text-center">
-          <p className="text-sm font-medium">
+        <div className="mt-6 rounded-lg border border-dashed border-line-strong px-6 py-12 text-center">
+          <p className="text-base font-semibold">
             {status === "loading" && rooms.length === 0
               ? "Loading rooms…"
               : rooms.length === 0
@@ -476,11 +613,13 @@ function RoomBrowser({ onJoin }: { onJoin: (code: string) => void }) {
                 : "No rooms match your filters."}
           </p>
           {status !== "loading" && rooms.length === 0 && (
-            <p className="mt-1 text-xs text-faint">Create one above — it appears here for everyone instantly.</p>
+            <p className="mt-1.5 text-sm text-muted">
+              Create one above — it appears here for everyone instantly.
+            </p>
           )}
         </div>
       ) : (
-        <ul className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+        <ul className="mt-6 grid gap-1.5">
           {visible.map((room) => (
             <li key={room.code}>
               <RoomCard room={room} onJoin={() => onJoin(room.code)} />
@@ -493,34 +632,48 @@ function RoomBrowser({ onJoin }: { onJoin: (code: string) => void }) {
 }
 
 function RoomCard({ room, onJoin }: { room: RoomSummary; onJoin: () => void }) {
+  const time = formatTimeControl(room.initialMs, room.incrementMs);
   return (
-    <article className="flex h-full animate-rise flex-col rounded-lg border border-line bg-surface p-4 transition-colors hover:border-line-strong">
-      <div className="flex items-start justify-between gap-2">
-        <h3 className="min-w-0 truncate font-semibold">{room.name}</h3>
-        <LockIcon className="size-4 shrink-0 text-faint" />
+    <article className="grid animate-rise grid-cols-[minmax(0,1fr)_auto] items-center gap-x-6 gap-y-2 rounded-lg bg-surface px-5 py-4 transition-colors hover:bg-raised sm:grid-cols-[minmax(0,1fr)_7rem_6rem_3rem_auto]">
+      <div className="min-w-0">
+        <h3 className="flex items-center gap-2 font-bold">
+          <span className="truncate">{room.name}</span>
+          <LockIcon className="size-3.5 shrink-0 text-faint" />
+        </h3>
+        <p className="mt-0.5 truncate text-sm text-muted">
+          Hosted by {room.hostName}
+        </p>
       </div>
-      <p className="mt-0.5 truncate text-xs text-muted">Hosted by {room.hostName}</p>
-      <dl className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted">
-        <div className="flex gap-1">
+      <dl className="contents text-[0.9375rem]">
+        <div className="hidden sm:block">
           <dt className="sr-only">Room ID</dt>
-          <dd className="numeric tracking-wider text-ink">{room.code}</dd>
+          <dd translate="no" className="numeric tracking-wider text-ink">
+            {room.code}
+          </dd>
         </div>
-        <div className="flex gap-1">
+        <div className="hidden text-right sm:block">
           <dt className="sr-only">Time control</dt>
-          <dd className="numeric">{formatTimeControl(room.initialMs, room.incrementMs)}</dd>
+          <dd className="text-muted tabular-nums">{time}</dd>
         </div>
-        <div className="flex gap-1">
+        <div className="hidden text-right sm:block">
           <dt className="sr-only">Players</dt>
-          <dd className="numeric">{room.players}/2</dd>
-        </div>
-        <div className="flex gap-1">
-          <dt className="sr-only">Status</dt>
-          <dd className="text-positive">Waiting</dd>
+          <dd className="text-muted tabular-nums">{room.players}/2</dd>
         </div>
       </dl>
-      <Button size="sm" variant="secondary" className="mt-4 self-start" onClick={onJoin}>
+      <Button
+        size="sm"
+        variant="primary"
+        onClick={onJoin}
+        aria-label={`Join ${room.name}`}
+      >
         Join
       </Button>
+      <p className="col-span-2 text-sm text-muted sm:hidden">
+        <span translate="no" className="numeric text-ink">
+          {room.code}
+        </span>{" "}
+        · {time} · {room.players}/2
+      </p>
     </article>
   );
 }

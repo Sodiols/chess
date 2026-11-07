@@ -69,10 +69,11 @@ export function ModeCards({ heading: Heading = "h2" }: { heading?: "h2" | "h3" }
             </svg>
 
             <div className="min-w-0">
-              <Heading className="text-2xl leading-tight font-bold">{card.title}</Heading>
-              <p className="mt-1.5 text-base leading-snug text-muted">
-                {card.description} <span className="whitespace-nowrap text-faint">· {card.where}</span>
-              </p>
+              <div className="flex flex-wrap items-baseline gap-x-3">
+                <Heading className="text-2xl leading-tight font-bold">{card.title}</Heading>
+                <span className="text-sm text-faint">{card.where}</span>
+              </div>
+              <p className="mt-1.5 text-base leading-snug text-muted">{card.description}</p>
             </div>
 
             <div className="col-span-2 flex flex-wrap gap-2 sm:col-span-1 sm:justify-end">

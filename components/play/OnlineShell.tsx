@@ -20,10 +20,17 @@ export function OnlineShell({
     <>
       <Navbar />
       <main
-        className={`mx-auto w-full px-4 pt-8 pb-16 sm:px-5 sm:pt-10 ${width === "wide" ? "max-w-6xl" : "max-w-2xl"}`}
+        className={`mx-auto w-full px-4 pt-10 pb-24 sm:px-6 sm:pt-14 lg:px-8 ${width === "wide" ? "max-w-[92rem]" : "max-w-[80rem]"}`}
       >
-        <h1 className="text-2xl font-bold sm:text-[1.75rem]">{title}</h1>
-        <p className="mt-1.5 mb-7 text-sm text-muted">{description}</p>
+        <h1 className="animate-enter text-[2.5rem] leading-[1] font-extrabold sm:text-[3.5rem]">
+          {title}
+        </h1>
+        <p
+          className="mt-4 mb-10 animate-enter text-lg text-muted"
+          style={{ animationDelay: "60ms" }}
+        >
+          {description}
+        </p>
         <OnlineGate>{children}</OnlineGate>
       </main>
     </>

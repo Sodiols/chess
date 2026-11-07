@@ -36,7 +36,7 @@ export function OptionGroup<T extends string>({
 
   return (
     <fieldset>
-      <legend className="eyebrow mb-2">{legend}</legend>
+      <legend className="mb-2.5 text-sm font-semibold">{legend}</legend>
       <div
         className={clsx(
           "gap-1.5",
@@ -56,11 +56,11 @@ export function OptionGroup<T extends string>({
             <label
               key={option.value}
               className={clsx(
-                "relative flex cursor-pointer flex-col items-center justify-center gap-1.5 rounded-lg border px-3 py-2.5 text-center text-[0.8125rem] transition-colors duration-150",
+                "press relative flex min-h-11 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-md border px-3 py-2.5 text-center text-sm active:scale-[0.97]",
                 "has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-accent",
                 selected
-                  ? "border-accent bg-accent-soft text-ink"
-                  : "border-line bg-raised text-muted hover:border-line-strong hover:text-ink",
+                  ? "border-accent bg-accent-soft font-semibold text-ink"
+                  : "border-transparent bg-raised text-muted hover:bg-[#282724] hover:text-ink",
               )}
             >
               <input

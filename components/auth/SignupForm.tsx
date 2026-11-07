@@ -10,6 +10,7 @@ import { validateEmail, validatePassword, validateUsername } from "@/lib/auth/va
 import { api } from "@/lib/multiplayer/client";
 import { checkUsername, useUsernameCheck } from "@/hooks/useUsernameCheck";
 import { Button } from "@/components/ui/Button";
+import { OPENINGS } from "@/constants/openings";
 import { AuthShell, Field, FormAlert, Spinner } from "./AuthShell";
 import { NotConfigured } from "./NotConfigured";
 import { UsernameHint } from "./UsernameHint";
@@ -40,7 +41,7 @@ export function SignupForm({ next }: { next: string }) {
   if (sentTo) return <CheckEmail sentTo={sentTo} next={next} onBack={() => setSentTo(null)} />;
   if (auth.status === "signed-in" || auth.status === "loading") {
     return (
-      <AuthShell title="Create your account">
+      <AuthShell opening={OPENINGS.sicilian} title="Create your account">
         <Spinner label={auth.status === "loading" ? "Loading…" : "Signed in. Redirecting…"} />
       </AuthShell>
     );
@@ -126,7 +127,7 @@ export function SignupForm({ next }: { next: string }) {
   };
 
   return (
-    <AuthShell
+    <AuthShell opening={OPENINGS.sicilian}
       title="Create your account"
       description={
         upgrading
@@ -142,7 +143,7 @@ export function SignupForm({ next }: { next: string }) {
         </>
       }
     >
-      <form onSubmit={submit} noValidate className="space-y-4">
+      <form onSubmit={submit} noValidate className="space-y-5">
         <Field
           label="Username"
           value={username}
@@ -232,7 +233,7 @@ function CheckEmail({
   };
 
   return (
-    <AuthShell
+    <AuthShell opening={OPENINGS.sicilian}
       title="Check your email"
       description={
         <>

@@ -37,15 +37,15 @@ export function PromotionDialog({
             type="button"
             autoFocus={index === 0}
             onClick={() => onSelect(piece)}
-            className="group flex flex-col items-center gap-1 rounded-lg border border-line bg-raised px-1 pt-2 pb-1.5 transition-colors hover:border-accent hover:bg-accent-soft"
+            className="press group flex flex-col items-center gap-1.5 rounded-md border border-transparent bg-surface px-1 pt-3 pb-2.5 hover:border-accent hover:bg-accent-soft"
           >
             <span
               aria-hidden
-              className="block w-full max-w-14 transition-transform duration-150 group-hover:scale-105"
+              className="block w-full max-w-16 transition-transform duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] group-hover:-translate-y-1.5 group-hover:scale-110"
             >
               <ChessPiece piece={{ color, type: piece }} style={pieceStyle} />
             </span>
-            <span className="text-[0.75rem] font-medium text-muted group-hover:text-ink">
+            <span className="text-[0.8125rem] font-semibold text-muted group-hover:text-ink">
               {PIECE_NAMES[piece]}
             </span>
           </button>
@@ -55,7 +55,7 @@ export function PromotionDialog({
       <button
         type="button"
         onClick={onCancel}
-        className="mt-4 w-full text-center text-xs text-faint transition-colors hover:text-muted"
+        className="mt-4 w-full py-2 text-center text-sm text-muted transition-colors hover:text-ink"
       >
         Cancel this move
       </button>

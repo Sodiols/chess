@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/auth/session";
 import { authErrorCode } from "@/lib/auth/errors";
 import { validatePassword } from "@/lib/auth/validation";
 import { Button } from "@/components/ui/Button";
+import { OPENINGS } from "@/constants/openings";
 import { AuthShell, Field, FormAlert, Spinner } from "./AuthShell";
 import { NotConfigured } from "./NotConfigured";
 import { useLinkError } from "./linkHash";
@@ -33,14 +34,14 @@ export function ResetPasswordForm({ next, mode }: { next: string; mode: "reset" 
   if (auth.status === "unconfigured") return <NotConfigured />;
   if (!linkError && auth.status === "loading") {
     return (
-      <AuthShell title={title}>
+      <AuthShell opening={OPENINGS.london} title={title}>
         <Spinner label="Checking your link…" />
       </AuthShell>
     );
   }
   if (linkError || auth.status !== "signed-in") {
     return (
-      <AuthShell title="Link not valid" description="Reset links work once and expire after a while.">
+      <AuthShell opening={OPENINGS.london} title="Link not valid" description="Reset links work once and expire after a while.">
         <div className="space-y-4">
           <FormAlert error="invalid_link" />
           <Link
@@ -55,7 +56,7 @@ export function ResetPasswordForm({ next, mode }: { next: string; mode: "reset" 
   }
   if (done) {
     return (
-      <AuthShell title="Password updated" description="You're signed in with your new password.">
+      <AuthShell opening={OPENINGS.london} title="Password updated" description="You're signed in with your new password.">
         <Button variant="primary" onClick={() => router.replace(next)}>
           Continue
         </Button>
@@ -88,8 +89,8 @@ export function ResetPasswordForm({ next, mode }: { next: string; mode: "reset" 
   };
 
   return (
-    <AuthShell title={title} description={`For ${auth.user.email ?? "your account"}.`}>
-      <form onSubmit={submit} noValidate className="space-y-4">
+    <AuthShell opening={OPENINGS.london} title={title} description={`For ${auth.user.email ?? "your account"}.`}>
+      <form onSubmit={submit} noValidate className="space-y-5">
         <Field
           label="New password"
           type="password"

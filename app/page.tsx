@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Navbar } from "@/components/Navbar";
 import { ModeChooser } from "@/components/ModeChooser";
-import { HeroBoard } from "@/components/chess/HeroBoard";
+import { ShowcaseBoard } from "@/components/chess/ShowcaseBoard";
 import { ModeCards } from "@/components/play/ModeCards";
 
 export default function HomePage() {
@@ -43,7 +43,7 @@ export default function HomePage() {
           </div>
 
           <div className="mx-auto w-full animate-enter lg:max-w-[44rem]" style={{ animationDelay: "120ms" }}>
-            <HeroBoard />
+            <ShowcaseBoard />
           </div>
         </section>
 

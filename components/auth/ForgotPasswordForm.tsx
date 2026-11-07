@@ -7,6 +7,7 @@ import { siteUrl, useAuth } from "@/lib/auth/session";
 import { authErrorCode } from "@/lib/auth/errors";
 import { validateEmail } from "@/lib/auth/validation";
 import { Button } from "@/components/ui/Button";
+import { OPENINGS } from "@/constants/openings";
 import { AuthShell, Field, FormAlert } from "./AuthShell";
 import { NotConfigured } from "./NotConfigured";
 
@@ -43,7 +44,7 @@ export function ForgotPasswordForm() {
 
   if (sent) {
     return (
-      <AuthShell
+      <AuthShell opening={OPENINGS.caroKann}
         title="Check your email"
         description={
           <>
@@ -65,7 +66,7 @@ export function ForgotPasswordForm() {
   }
 
   return (
-    <AuthShell
+    <AuthShell opening={OPENINGS.caroKann}
       title="Reset your password"
       description="Enter the email you signed up with and we'll send you a reset link."
       footer={
@@ -74,7 +75,7 @@ export function ForgotPasswordForm() {
         </Link>
       }
     >
-      <form onSubmit={submit} noValidate className="space-y-4">
+      <form onSubmit={submit} noValidate className="space-y-5">
         <Field
           label="Email"
           type="email"

@@ -63,21 +63,21 @@ export function Dialog({
       {open && (
         <div
           className={clsx(
-            "border border-line bg-surface p-5 shadow-[0_24px_60px_-12px_rgba(0,0,0,0.7)] sm:p-6",
+            "bg-raised p-6 shadow-[0_30px_80px_-16px_rgba(0,0,0,0.8)] sm:p-7",
             placement === "bottom"
               ? "animate-slide-up rounded-t-2xl pb-[max(1.25rem,env(safe-area-inset-bottom))]"
               : "animate-rise rounded-lg",
           )}
         >
-          <h2 id={titleId} className="text-lg font-semibold">
+          <h2 id={titleId} className="text-[1.375rem] leading-tight font-extrabold">
             {title}
           </h2>
           {description && (
-            <p id={descriptionId} className="mt-1.5 text-sm leading-relaxed text-muted">
+            <p id={descriptionId} className="mt-2 text-[0.9375rem] leading-relaxed text-muted">
               {description}
             </p>
           )}
-          <div className="mt-5">{children}</div>
+          <div className="mt-6">{children}</div>
         </div>
       )}
     </dialog>

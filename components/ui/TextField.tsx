@@ -23,7 +23,7 @@ export function TextField({
 
   return (
     <div>
-      <label htmlFor={id} className="eyebrow mb-2 block">
+      <label htmlFor={id} className="mb-2 block text-sm font-semibold">
         {label}
       </label>
       <input
@@ -35,7 +35,7 @@ export function TextField({
         autoComplete={autoComplete}
         spellCheck={false}
         onChange={(event) => onChange(event.target.value)}
-        className="h-10 w-full rounded-lg border border-line bg-raised px-3 text-sm text-ink transition-colors placeholder:text-faint hover:border-line-strong focus:border-accent focus:outline-none"
+        className="h-12 w-full rounded-md border border-line bg-surface px-3.5 text-[0.9375rem] text-ink transition-[border-color,background-color] placeholder:text-faint hover:border-line-strong focus:border-accent focus:bg-raised focus:outline-none"
       />
     </div>
   );

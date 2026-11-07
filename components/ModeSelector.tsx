@@ -39,12 +39,12 @@ export function ModeSelector({ value, onSelect, layout = "card" }: ModeSelectorP
               onClick={() => onSelect(mode)}
               aria-pressed={value ? selected : undefined}
               className={clsx(
-                "press group flex h-full w-full flex-col items-start rounded-lg text-left",
+                "press group flex h-full w-full flex-col items-start rounded-lg text-left active:scale-[0.98]",
                 layout === "card" ? "bg-raised p-4 hover:bg-[#262522] sm:p-5" : "gap-1 border p-3",
                 layout === "compact" &&
                   (selected
                     ? "border-accent bg-accent-soft/60"
-                    : "border-line bg-surface hover:border-line-strong hover:bg-raised"),
+                    : "border-transparent bg-raised hover:bg-[#282724]"),
               )}
             >
               {layout === "card" && (

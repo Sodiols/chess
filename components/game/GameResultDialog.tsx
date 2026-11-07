@@ -4,6 +4,7 @@ import type { Color, GameResult } from "@/types";
 import { describeResult, formatDuration } from "@/lib/chess/format";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
+import { ChessPiece } from "@/components/chess/ChessPiece";
 
 interface GameResultDialogProps {
   open: boolean;
@@ -44,21 +45,37 @@ export function GameResultDialog({
 
   return (
     <Dialog open={open} onClose={onDismiss} title={headline} description={detail}>
-      <dl className="flex gap-6 border-y border-line py-3 text-sm">
-        <div>
-          <dt className="eyebrow">Moves</dt>
-          <dd className="numeric mt-0.5">{fullMoves}</dd>
-        </div>
-        {durationMs !== null && (
-          <div>
-            <dt className="eyebrow">Duration</dt>
-            <dd className="numeric mt-0.5">{formatDuration(durationMs)}</dd>
-          </div>
-        )}
-        <div>
-          <dt className="eyebrow">Result</dt>
-          <dd className="numeric mt-0.5">
+      {/* The two kings: the loser's tips over; in a draw both stand. */}
+      <div aria-hidden className="-mt-1 mb-6 flex items-end justify-center gap-6 rounded-md bg-canvas/60 pt-5 pb-3">
+        {(["w", "b"] as const).map((color) => (
+          <span
+            key={color}
+            className={
+              result.kind === "win" && result.winner !== color
+                ? "block size-16 origin-[50%_88%] animate-topple"
+                : "block size-16 animate-hop"
+            }
+          >
+            <ChessPiece piece={{ color, type: "k" }} style="classic" />
+          </span>
+        ))}
+      </div>
+
+      <dl className="grid grid-cols-3 gap-px overflow-hidden rounded-md bg-line text-[0.9375rem]">
+        <div className="bg-surface px-4 py-3">
+          <dt className="text-sm text-muted">Result</dt>
+          <dd className="mt-0.5 text-xl font-extrabold tabular-nums">
             {result.kind === "draw" ? "½–½" : result.winner === "w" ? "1–0" : "0–1"}
+          </dd>
+        </div>
+        <div className="bg-surface px-4 py-3">
+          <dt className="text-sm text-muted">Moves</dt>
+          <dd className="mt-0.5 text-xl font-bold tabular-nums">{fullMoves}</dd>
+        </div>
+        <div className="bg-surface px-4 py-3">
+          <dt className="text-sm text-muted">Duration</dt>
+          <dd className="mt-0.5 text-xl font-bold tabular-nums">
+            {durationMs !== null ? formatDuration(durationMs) : "—"}
           </dd>
         </div>
       </dl>
@@ -79,7 +96,7 @@ export function GameResultDialog({
             Decline rematch
           </Button>
         )}
-        <p className="text-center text-xs text-faint" aria-live="polite">
+        <p className="text-center text-sm text-faint" aria-live="polite">
           {rematchNote}
         </p>
         <div className="grid grid-cols-2 gap-2 pt-1">
