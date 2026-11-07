@@ -53,9 +53,6 @@ export function AuthShell({
   );
 }
 
-const INPUT =
-  "h-12 w-full rounded-md border bg-surface px-3.5 text-[0.9375rem] text-ink transition-[border-color,background-color] placeholder:text-faint hover:border-line-strong focus:border-accent focus:bg-raised focus:outline-none";
-
 interface FieldProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, "onChange" | "value"> {
   label: string;
   value: string;
@@ -76,7 +73,14 @@ export function Field({ label, value, onChange, error, hint, type = "text", ...r
       <label htmlFor={id} className="mb-2 block text-sm font-semibold">
         {label}
       </label>
-      <div className="relative">
+      {/* The box draws the border; input and Show button sit side by side inside it,
+          so the button can never drift outside the field. */}
+      <div
+        className={clsx(
+          "flex h-12 w-full min-w-0 items-center rounded-md border bg-surface transition-[border-color,background-color] focus-within:border-accent focus-within:bg-raised hover:border-line-strong",
+          error ? "border-[#8a3d33]" : "border-line",
+        )}
+      >
         <input
           id={id}
           type={isPassword && revealed ? "text" : type}
@@ -85,7 +89,7 @@ export function Field({ label, value, onChange, error, hint, type = "text", ...r
           aria-invalid={error ? true : undefined}
           aria-describedby={described}
           spellCheck={false}
-          className={clsx(INPUT, error ? "border-[#8a3d33]" : "border-line", isPassword && "pr-16")}
+          className="h-full w-full min-w-0 flex-1 rounded-md bg-transparent px-3.5 text-base text-ink placeholder:text-faint focus:outline-none sm:text-[0.9375rem]"
           {...rest}
         />
         {isPassword && (
@@ -94,7 +98,7 @@ export function Field({ label, value, onChange, error, hint, type = "text", ...r
             onClick={() => setRevealed((value) => !value)}
             aria-pressed={revealed}
             aria-label={revealed ? `Hide ${label.toLowerCase()}` : `Show ${label.toLowerCase()}`}
-            className="press absolute inset-y-1.5 right-1.5 rounded px-3 text-[0.8125rem] font-medium text-muted hover:bg-[#282724] hover:text-ink"
+            className="press mr-1.5 h-9 shrink-0 rounded px-3 text-[0.8125rem] font-medium text-muted hover:bg-[#282724] hover:text-ink"
           >
             {revealed ? "Hide" : "Show"}
           </button>

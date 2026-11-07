@@ -46,7 +46,7 @@ export function ResetPasswordForm({ next, mode }: { next: string; mode: "reset" 
           <FormAlert error="invalid_link" />
           <Link
             href="/forgot-password"
-            className="inline-flex h-10 items-center rounded-lg bg-accent px-4 text-sm font-semibold text-[#1f170a] hover:bg-[#e2b970]"
+            className="press inline-flex h-12 items-center rounded-md bg-accent px-6 text-[0.9375rem] font-bold text-[#1f170a] hover:bg-[#e2b970]"
           >
             Request a new link
           </Link>

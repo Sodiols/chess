@@ -53,7 +53,7 @@ export function ForgotPasswordForm() {
           </>
         }
         footer={
-          <Link href="/login" className="font-medium text-accent hover:underline">
+          <Link href="/login" className="font-medium text-accent hover:underline inline-block py-2.5 -my-2.5">
             Back to log in
           </Link>
         }
@@ -70,7 +70,7 @@ export function ForgotPasswordForm() {
       title="Reset your password"
       description="Enter the email you signed up with and we'll send you a reset link."
       footer={
-        <Link href="/login" className="font-medium text-accent hover:underline">
+        <Link href="/login" className="font-medium text-accent hover:underline inline-block py-2.5 -my-2.5">
           Back to log in
         </Link>
       }

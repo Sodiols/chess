@@ -18,6 +18,7 @@ const MIGRATIONS = {
     "cancel_room", "list_open_rooms", "get_game_state", "submit_move", "game_action", "run_maintenance",
   ],
   "20261108000000_accounts.sql": ["set_username", "username_available", "get_player_stats", "get_hosted_room"],
+  "20261109000000_contact.sql": ["submit_contact"],
 };
 
 let problems = 0;

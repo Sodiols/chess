@@ -429,3 +429,21 @@ describe("row level security", () => {
     await expect(insert(outsider, "presence")).rejects.toThrow(/row-level security/);
   });
 });
+
+describe("contact messages", () => {
+  it("stores a valid message, rejects bad input and rate limits per client", async () => {
+    const key = randomUUID();
+    const send = (name: string, email: string, message: string) => rpc<Result>(db, "submit_contact", [name, email, message, key]);
+
+    expect(await send("Ada", "ada@example.com", "Love the beginner mode!")).toEqual({ ok: true });
+    expect((await send("", "ada@example.com", "Long enough message")).error).toBe("invalid_contact_name");
+    expect((await send("Ada", "not-an-email", "Long enough message")).error).toBe("invalid_email");
+    expect((await send("Ada", "ada@example.com", "short")).error).toBe("invalid_contact_message");
+    expect(await send("Ada", "ada@example.com", "Fifth try still fits the window")).toEqual({ ok: true });
+    expect((await send("Ada", "ada@example.com", "Sixth try is one too many")).error).toBe("rate_limited");
+
+    const { rows } = await db.query<{ n: number }>("select count(*)::int as n from public.contact_messages");
+    expect(rows[0]!.n).toBe(2);
+    await expect(asUser(db, randomUUID(), "select * from public.contact_messages", [])).rejects.toThrow(/permission denied/);
+  });
+});

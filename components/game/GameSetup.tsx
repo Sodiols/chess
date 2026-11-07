@@ -283,7 +283,7 @@ export function GameSetup({
                   max={CUSTOM_MINUTES_RANGE.max}
                   value={customValue}
                   onChange={(event) => setCustomMinutes(event.target.value)}
-                  className="numeric h-10 w-24 rounded-lg border border-line bg-raised px-3 text-sm hover:border-line-strong focus:border-accent focus:outline-none"
+                  className="h-12 w-28 rounded-md border border-line bg-surface px-3.5 text-base tabular-nums hover:border-line-strong focus:border-accent focus:outline-none sm:text-[0.9375rem]"
                 />
                 <span className="text-xs text-faint">
                   {CUSTOM_MINUTES_RANGE.min}–{CUSTOM_MINUTES_RANGE.max}

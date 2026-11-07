@@ -272,11 +272,11 @@ function Stats() {
             </p>
           </div>
         ) : (
-          <ul className="mt-6 grid gap-1.5">
+          <ul className="mt-6 grid grid-cols-1 gap-1.5">
             {recent.map((game) => (
               <li
                 key={game.id}
-                className="flex items-center gap-4 rounded-lg bg-surface px-5 py-4 text-[0.9375rem] transition-colors hover:bg-raised"
+                className="flex items-center gap-3 rounded-lg bg-surface px-4 py-3.5 text-[0.9375rem] transition-colors hover:bg-raised sm:gap-4 sm:px-5 sm:py-4"
               >
                 <span
                   className={clsx(
@@ -292,12 +292,13 @@ function Stats() {
                       ? "Loss"
                       : "Draw"}
                 </span>
-                <span className="min-w-0 flex-1 truncate">
-                  vs <span className="font-bold">{game.opponentName}</span>
-                  <span className="text-muted">
-                    {" "}
-                    · {game.color === "w" ? "White" : "Black"} ·{" "}
-                    {game.reason.replace(/-/g, " ")}
+                <span className="min-w-0 flex-1 sm:truncate">
+                  <span className="block truncate sm:inline">
+                    vs <span className="font-bold">{game.opponentName}</span>
+                  </span>
+                  <span className="block truncate text-sm text-muted sm:inline sm:text-[0.9375rem]">
+                    <span className="hidden sm:inline"> · </span>
+                    {game.color === "w" ? "White" : "Black"} · {game.reason.replace(/-/g, " ")}
                   </span>
                 </span>
                 <span className="hidden shrink-0 text-sm text-muted tabular-nums sm:inline">

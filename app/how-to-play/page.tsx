@@ -1,12 +1,16 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/site";
 import Link from "next/link";
 import type { Square } from "@/types";
 import { Navbar } from "@/components/Navbar";
+import { Footer } from "@/components/Footer";
 import { MiniBoard } from "@/components/chess/MiniBoard";
 
-export const metadata: Metadata = {
-  title: "How to play — Gambit",
-};
+export const metadata: Metadata = pageMetadata(
+  "How to Play Chess",
+  "Learn the rules of chess in five minutes: how each piece moves, check, checkmate, stalemate, castling, en passant, promotion and every way a game is drawn.",
+  "/how-to-play",
+);
 
 interface Diagram {
   fen: string;
@@ -290,6 +294,7 @@ export default function HowToPlayPage() {
           </Link>
         </div>
       </main>
+      <Footer />
     </>
   );
 }

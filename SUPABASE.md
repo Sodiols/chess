@@ -18,14 +18,16 @@ changes nothing, and reports which of the steps below are still missing.
 
 ## 1. Apply the migrations
 
-Run both files, in order, on the project (each is additive and safe to re-run):
+Run the files, in order, on the project (each is additive and safe to re-run):
 
 1. `supabase/migrations/20261107000000_online_play.sql` — online play.
 2. `supabase/migrations/20261108000000_accounts.sql` — usernames, sign-up
    trigger on `auth.users`, statistics, room fixes.
+3. `supabase/migrations/20261109000000_contact.sql` — contact form messages
+   (read them in Table Editor → `contact_messages`).
 
 - **Supabase CLI:** `supabase link --project-ref <ref>` then `supabase db push`.
-- **Dashboard:** SQL Editor → paste a file → Run (first one, then the second).
+- **Dashboard:** SQL Editor → paste a file → Run (each file in order).
 
 Apply them to a test project first. Nothing in this repo touches a database by
 itself, and neither migration deletes users, games or rooms. Until the second

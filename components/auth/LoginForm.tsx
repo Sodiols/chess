@@ -72,7 +72,7 @@ export function LoginForm({ next }: { next: string }) {
       footer={
         <>
           New to Gambit?{" "}
-          <Link href={`/signup?next=${encodeURIComponent(next)}`} className="font-medium text-accent hover:underline">
+          <Link href={`/signup?next=${encodeURIComponent(next)}`} className="font-medium text-accent hover:underline inline-block py-2.5 -my-2.5">
             Create an account
           </Link>
         </>
@@ -100,7 +100,7 @@ export function LoginForm({ next }: { next: string }) {
           error={fieldErrors.password}
         />
         <div className="-mt-1 text-right">
-          <Link href="/forgot-password" className="text-sm text-muted hover:text-ink hover:underline">
+          <Link href="/forgot-password" className="text-sm text-muted hover:text-ink hover:underline inline-block py-2.5 -my-2.5">
             Forgot password?
           </Link>
         </div>

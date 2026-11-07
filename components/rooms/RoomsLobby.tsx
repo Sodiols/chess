@@ -206,7 +206,7 @@ function CreateRoomForm({
           aria-describedby={`${passwordId}-hint`}
           onChange={(event) => setPassword(event.target.value)}
           className={clsx(
-            "h-12 w-full rounded-md border bg-canvas px-3.5 text-[0.9375rem] hover:border-line-strong focus:border-accent focus:outline-none",
+            "h-12 w-full rounded-md border bg-canvas px-3.5 text-base sm:text-[0.9375rem] hover:border-line-strong focus:border-accent focus:outline-none",
             passwordError ? "border-[#8a3d33]" : "border-line",
           )}
         />
@@ -388,7 +388,7 @@ function JoinRoomForm({
           autoFocus={autoFocusPassword}
           autoComplete="off"
           onChange={(event) => setPassword(event.target.value)}
-          className="h-12 w-full rounded-md border border-line bg-canvas px-3.5 text-[0.9375rem] hover:border-line-strong focus:border-accent focus:outline-none"
+          className="h-12 w-full rounded-md border border-line bg-canvas px-3.5 text-base sm:text-[0.9375rem] hover:border-line-strong focus:border-accent focus:outline-none"
         />
       </div>
       {error && !inline && (
@@ -656,7 +656,7 @@ function RoomBrowser({ onJoin }: { onJoin: (code: string) => void }) {
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Search by room ID or name"
-          className="h-11 min-w-0 flex-1 rounded-md border border-line bg-surface px-3.5 text-[0.9375rem] hover:border-line-strong focus:border-accent focus:outline-none sm:max-w-sm"
+          className="h-11 min-w-0 flex-1 rounded-md border border-line bg-surface px-3.5 text-base sm:text-[0.9375rem] hover:border-line-strong focus:border-accent focus:outline-none sm:max-w-sm"
         />
         <label className="sr-only" htmlFor={`${searchId}-time`}>
           Filter by time control
@@ -665,7 +665,7 @@ function RoomBrowser({ onJoin }: { onJoin: (code: string) => void }) {
           id={`${searchId}-time`}
           value={timeFilter}
           onChange={(event) => setTimeFilter(event.target.value)}
-          className="h-11 rounded-md border border-line bg-surface px-3 text-[0.9375rem] text-ink hover:border-line-strong focus:border-accent focus:outline-none"
+          className="h-11 rounded-md border border-line bg-surface px-3 text-base text-ink sm:text-[0.9375rem] hover:border-line-strong focus:border-accent focus:outline-none"
         >
           <option value="all">All time controls</option>
           {ONLINE_TIME_CONTROLS.map((entry) => (
@@ -698,7 +698,7 @@ function RoomBrowser({ onJoin }: { onJoin: (code: string) => void }) {
           )}
         </div>
       ) : (
-        <ul className="mt-4 grid gap-1.5">
+        <ul className="mt-4 grid grid-cols-1 gap-1.5">
           {visible.map((room) => (
             <li key={room.code}>
               <RoomCard room={room} onJoin={() => onJoin(room.code)} />

@@ -126,6 +126,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   username_reserved: "That username is reserved. Choose another.",
   username_taken: "That username is already taken.",
   invalid_email: "Enter a valid email address.",
+  invalid_contact_name: "Enter your name (up to 80 characters).",
+  invalid_contact_message: "Write a message of 10–4000 characters.",
   weak_password: "Use at least 8 characters for your password.",
   password_required: "Enter your password.",
   password_updated: "Password updated.",

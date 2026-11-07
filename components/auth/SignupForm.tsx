@@ -137,7 +137,7 @@ export function SignupForm({ next }: { next: string }) {
       footer={
         <>
           Already have an account?{" "}
-          <Link href={`/login?next=${encodeURIComponent(next)}`} className="font-medium text-accent hover:underline">
+          <Link href={`/login?next=${encodeURIComponent(next)}`} className="font-medium text-accent hover:underline inline-block py-2.5 -my-2.5">
             Log in
           </Link>
         </>

@@ -1,14 +1,18 @@
 import type { Metadata } from "next";
+import { pageMetadata } from "@/lib/site";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Navbar } from "@/components/Navbar";
+import { Footer } from "@/components/Footer";
 import { ModeCards } from "@/components/play/ModeCards";
 import { ShowcaseBoard } from "@/components/chess/ShowcaseBoard";
 import { OPENINGS } from "@/constants/openings";
 
-export const metadata: Metadata = {
-  title: "Play — Gambit",
-};
+export const metadata: Metadata = pageMetadata(
+  "Play Chess",
+  "Choose how to play chess: live online matchmaking, a private match with a friend, the computer at three difficulty levels, or two players on one device.",
+  "/play",
+);
 
 export default async function PlayPage({
   searchParams,
@@ -40,12 +44,13 @@ export default async function PlayPage({
           <ModeCards />
           <p className="mt-8 text-[0.9375rem] text-muted">
             New to chess?{" "}
-            <Link href="/how-to-play" className="font-semibold text-accent hover:underline">
+            <Link href="/how-to-play" className="font-semibold text-accent hover:underline inline-block py-2.5 -my-2.5">
               Learn the rules in five minutes
             </Link>
           </p>
         </div>
       </main>
+      <Footer />
     </>
   );
 }

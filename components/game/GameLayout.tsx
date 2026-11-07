@@ -36,9 +36,9 @@ export function GameLayout({
         <div className="flex flex-col gap-2.5">
           <div className="lg:hidden">{top}</div>
 
-          {/* Width is bounded by the remaining viewport height, so the square board
-              always fits vertically without a media query. */}
-          <div className="mx-auto w-full max-w-[min(100%,max(17rem,calc(100dvh-19rem)))] lg:max-w-[min(48rem,calc(100dvh-11rem))]">
+          {/* Width is bounded by the remaining viewport height (players, status,
+              controls and the 3D rim's extra depth), so the board and controls fit. */}
+          <div className="mx-auto w-full max-w-[min(100%,max(17rem,calc(100dvh-23rem)))] lg:max-w-[min(48rem,calc(100dvh-11rem))]">
             {board}
           </div>
 

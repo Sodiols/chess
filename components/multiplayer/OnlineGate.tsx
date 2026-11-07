@@ -132,7 +132,7 @@ export function OnlineGate({ children, bare = false }: OnlineGateProps) {
         </span>
         <Link
           href="/profile"
-          className="text-sm text-muted underline-offset-4 hover:text-ink hover:underline"
+          className="text-sm text-muted underline-offset-4 hover:text-ink hover:underline inline-block py-2.5 -my-2.5"
         >
           Your profile
         </Link>

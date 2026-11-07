@@ -35,7 +35,7 @@ export function TextField({
         autoComplete={autoComplete}
         spellCheck={false}
         onChange={(event) => onChange(event.target.value)}
-        className="h-12 w-full rounded-md border border-line bg-surface px-3.5 text-[0.9375rem] text-ink transition-[border-color,background-color] placeholder:text-faint hover:border-line-strong focus:border-accent focus:bg-raised focus:outline-none"
+        className="h-12 w-full rounded-md border border-line bg-surface px-3.5 text-base sm:text-[0.9375rem] text-ink transition-[border-color,background-color] placeholder:text-faint hover:border-line-strong focus:border-accent focus:bg-raised focus:outline-none"
       />
     </div>
   );

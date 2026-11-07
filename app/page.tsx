@@ -1,12 +1,30 @@
 import Link from "next/link";
+import { SITE_NAME, SITE_URL } from "@/lib/site";
 import { Navbar } from "@/components/Navbar";
 import { ModeChooser } from "@/components/ModeChooser";
 import { ShowcaseBoard } from "@/components/chess/ShowcaseBoard";
 import { ModeCards } from "@/components/play/ModeCards";
+import { Footer } from "@/components/Footer";
+
+const STRUCTURED_DATA = {
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  name: SITE_NAME,
+  url: SITE_URL,
+  applicationCategory: "GameApplication",
+  operatingSystem: "Any (web browser)",
+  description:
+    "Free chess in the browser: online matchmaking, private rooms, a computer opponent and two-player games on one device.",
+  offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+};
 
 export default function HomePage() {
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(STRUCTURED_DATA) }}
+      />
       <Navbar />
 
       <main>
@@ -81,29 +99,7 @@ export default function HomePage() {
         </section>
       </main>
 
-      <footer className="mx-auto max-w-[92rem] overflow-hidden px-4 pt-20 pb-8 sm:px-6 lg:px-8">
-        <div className="flex flex-wrap items-baseline justify-between gap-x-8 gap-y-3 text-sm text-muted">
-          <p>Offline modes play entirely on this device. Online play needs a free Gambit account.</p>
-          <nav aria-label="Footer" className="flex gap-6">
-            <Link href="/play" className="hover:text-ink">
-              Play
-            </Link>
-            <Link href="/how-to-play" className="hover:text-ink">
-              How to play
-            </Link>
-            <Link href="/profile" className="hover:text-ink">
-              Profile
-            </Link>
-          </nav>
-        </div>
-        <p
-          aria-hidden
-          translate="no"
-          className="mt-10 text-[min(28vw,26rem)] leading-[0.78] font-extrabold tracking-[-0.06em] whitespace-nowrap text-[#67635c] select-none"
-        >
-          Gambit
-        </p>
-      </footer>
+      <Footer />
     </>
   );
 }
