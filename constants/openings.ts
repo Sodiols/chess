@@ -17,4 +17,6 @@ export const OPENINGS = {
   italian: { name: "The Italian Game", line: line("e2e4 e7e5 g1f3 b8c6 f1c4 f8c5") },
   caroKann: { name: "The Caro–Kann", line: line("e2e4 c7c6 d2d4 d7d5 b1c3 d5e4 c3e4") },
   london: { name: "The London System", line: line("d2d4 d7d5 c1f4 g8f6 e2e3 c7c5") },
+  // Ends in checkmate: the home page hero plays it to show a game being won.
+  scholarsMate: { name: "Scholar’s Mate", line: line("e2e4 e7e5 f1c4 b8c6 d1h5 g8f6 h5f7") },
 } satisfies Record<string, Opening>;

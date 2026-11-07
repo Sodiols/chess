@@ -42,7 +42,8 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${manrope.variable} ${plexMono.variable}`}>
-      <body className="min-h-dvh antialiased">
+      {/* Extensions such as ColorZilla add attributes to <body> before hydration; this ignores only those, one level deep. */}
+      <body className="min-h-dvh antialiased" suppressHydrationWarning>
         {/* Clips the few px the tilted 3D board projects past narrow screens. On a
             wrapper, not body, because body overflow passes to the viewport and phones
             would still zoom out to fit; clip (unlike hidden) keeps sticky working. */}

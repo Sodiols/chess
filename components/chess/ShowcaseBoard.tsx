@@ -3,12 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 import clsx from "clsx";
 import type { Color } from "@/types";
-import { ChessEngine } from "@/lib/chess/engine";
-import { toMovePairs } from "@/lib/chess/format";
+import { ChessEngine, opposite } from "@/lib/chess/engine";
+import { colorName, toMovePairs } from "@/lib/chess/format";
 import { ASSISTANCE } from "@/constants/assistance";
 import { OPENINGS, type Opening } from "@/constants/openings";
 import { useGameSettings } from "@/hooks/useGameSettings";
 import { ChessBoard } from "./ChessBoard";
+import { ChessPiece } from "./ChessPiece";
 
 const START = new ChessEngine().snapshot();
 const FIRST_MOVE_MS = 1500;
@@ -72,36 +73,64 @@ export function ShowcaseBoard({
 
   const pairs = toMovePairs(position.history);
   const done = position.history.length === opening.line.length;
+  const mate = position.result?.kind === "win" && position.result.reason === "checkmate" ? position.result : null;
 
   return (
     <figure data-ui className={clsx("w-full", className)}>
-      <div
-        ref={stageRef}
-        onPointerMove={lean}
-        onPointerLeave={settle}
-        role="img"
-        aria-label={`A chessboard playing the opening moves of ${opening.name}`}
-        className={clsx(sweeping && "animate-sweep")}
-        style={{ "--board-tilt": `${TILT}deg` } as React.CSSProperties}
-      >
-        {/* Inert: a picture of a game, so its squares are not tab stops. */}
-        <div inert>
-          <ChessBoard
-            position={position}
-            selected={null}
-            selectedMoves={[]}
-            pins={{}}
-            rejection={null}
-            orientation={orientation}
-            settings={{ ...settings, board3d: true, coordinates: false }}
-            assistance={ASSISTANCE.pro}
-            interactive={false}
-            onSelect={noop}
-            onMove={noop}
-            onClearSelection={noop}
-            intro={position.history.length === 0}
-          />
+      <div className="relative">
+        <div
+          ref={stageRef}
+          onPointerMove={lean}
+          onPointerLeave={settle}
+          role="img"
+          aria-label={
+            mate
+              ? `A chessboard where ${colorName(mate.winner)} has delivered checkmate with ${opening.name}`
+              : `A chessboard playing the opening moves of ${opening.name}`
+          }
+          className={clsx(sweeping && "animate-sweep")}
+          style={{ "--board-tilt": `${TILT}deg` } as React.CSSProperties}
+        >
+          {/* Inert: a picture of a game, so its squares are not tab stops. */}
+          <div inert>
+            <ChessBoard
+              position={position}
+              selected={null}
+              selectedMoves={[]}
+              pins={{}}
+              rejection={null}
+              orientation={orientation}
+              settings={{ ...settings, board3d: true, coordinates: false }}
+              assistance={ASSISTANCE.pro}
+              interactive={false}
+              onSelect={noop}
+              onMove={noop}
+              onClearSelection={noop}
+              intro={position.history.length === 0}
+            />
+          </div>
         </div>
+
+        {mate && (
+          // Lands after the mated king has started to tip over.
+          <div
+            role="status"
+            className="pointer-events-none absolute inset-x-0 top-[18%] z-10 flex animate-enter justify-center px-4"
+            style={{ animationDelay: "700ms" }}
+          >
+            <div className="flex items-center gap-4 rounded-xl border border-accent/40 bg-canvas/90 py-3.5 pr-6 pl-4 shadow-[0_18px_50px_rgba(0,0,0,0.55)] backdrop-blur-md">
+              <span aria-hidden className="block size-11 shrink-0 origin-[50%_88%] animate-topple">
+                <ChessPiece piece={{ color: opposite(mate.winner), type: "k" }} style="classic" />
+              </span>
+              <span>
+                <span className="block text-[1.375rem] leading-tight font-extrabold text-accent">Checkmate!</span>
+                <span className="block text-[0.9375rem] text-muted">
+                  {colorName(mate.winner)} wins in {Math.ceil(position.history.length / 2)} moves
+                </span>
+              </span>
+            </div>
+          </div>
+        )}
       </div>
 
       {caption && (

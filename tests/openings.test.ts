@@ -11,4 +11,10 @@ describe("showcase openings", () => {
       }
     });
   }
+
+  it("Scholar's Mate ends in checkmate for White", () => {
+    const engine = new ChessEngine();
+    for (const [from, to] of OPENINGS.scholarsMate.line) engine.move(from, to);
+    expect(engine.snapshot().result).toEqual({ kind: "win", winner: "w", reason: "checkmate" });
+  });
 });
