@@ -37,6 +37,8 @@ interface ChessBoardProps {
   onSelect: (square: Square) => void;
   onMove: (from: Square, to: Square) => void;
   onClearSelection: () => void;
+  /** Sets the pieces down one by one on first render (the landing board). */
+  intro?: boolean;
 }
 
 export function ChessBoard({
@@ -52,8 +54,10 @@ export function ChessBoard({
   onSelect,
   onMove,
   onClearSelection,
+  intro = false,
 }: ChessBoardProps) {
   const boardRef = useRef<HTMLDivElement>(null);
+  const cameraRef = useRef<HTMLDivElement>(null);
   const pressRef = useRef<{ square: Square; x: number; y: number } | null>(null);
   const suppressClickRef = useRef(false);
   const [drag, setDrag] = useState<DragState | null>(null);
@@ -62,6 +66,18 @@ export function ChessBoard({
 
   const theme = getBoardTheme(settings.boardTheme);
   const flipped = orientation === "b";
+  const view3d = settings.board3d;
+
+  // A captured piece stays on screen just long enough to be knocked off the board.
+  // Derived during render (React's "previous props" pattern), cleared on animation end.
+  const [prevPieces, setPrevPieces] = useState(position.pieces);
+  const [taken, setTaken] = useState<Position["pieces"]>([]);
+  if (prevPieces !== position.pieces) {
+    setPrevPieces(position.pieces);
+    const gone = prevPieces.filter((old) => !position.pieces.some((piece) => piece.id === old.id));
+    // shortcut: only a single disappearance animates; resets and multi-ply jumps just snap.
+    setTaken(settings.animations && gone.length === 1 ? gone : []);
+  }
 
   /** Which piece's moves to advertise: the dragged one takes priority. */
   const activeSquare = drag?.from ?? selected;
@@ -73,6 +89,12 @@ export function ChessBoard({
 
   const squareAtPoint = useCallback(
     (clientX: number, clientY: number): Square | null => {
+      // Ask the browser which square is under the pointer: it hit-tests through the
+      // 3D tilt, where plain rectangle maths would land on the wrong rank.
+      const hit = document.elementFromPoint?.(clientX, clientY)?.closest<HTMLElement>("[data-square]");
+      if (hit && boardRef.current?.contains(hit)) return hit.dataset.square as Square;
+      if (view3d) return null;
+
       const rect = boardRef.current?.getBoundingClientRect();
       if (!rect) return null;
 
@@ -84,7 +106,7 @@ export function ChessBoard({
       const rank = flipped ? 7 - row : row;
       return `${FILES[file]}${8 - rank}` as Square;
     },
-    [flipped],
+    [flipped, view3d],
   );
 
   const handlePointerDown = useCallback(
@@ -115,7 +137,7 @@ export function ChessBoard({
         if (travelled < DRAG_THRESHOLD) return;
       }
 
-      const rect = drag ?? measureBoard(boardRef.current);
+      const rect = drag ?? measureBoard(boardRef.current, cameraRef.current);
       if (!rect) return;
       if (!drag) {
         try {
@@ -204,103 +226,144 @@ export function ChessBoard({
   );
 
   const draggedPiece = drag ? position.pieceAt[drag.from] : undefined;
+  const activePiece = activeSquare ? position.pieceAt[activeSquare] : undefined;
+  const lastTo = position.lastMove?.to;
+  const mated =
+    position.result?.kind === "win" && position.result.reason === "checkmate"
+      ? (position.result.winner === "w" ? "b" : "w")
+      : null;
+
+  /** Places a piece on its square; the extra half-turn keeps it upright when flipped. */
+  const placement = (square: Square) =>
+    `translate(${fileIndex(square) * 100}%, ${rankIndex(square) * 100}%)${flipped ? " rotate(180deg)" : ""}`;
 
   return (
     <div
-      className="relative w-full [container-type:inline-size]"
+      ref={cameraRef}
+      className={clsx("relative w-full [container-type:inline-size]", view3d && "board-camera board-3d")}
       style={
         {
           "--board-light": theme.light,
           "--board-dark": theme.dark,
+          "--board-rim": theme.rim,
+          "--board-edge": theme.edge,
         } as React.CSSProperties
       }
     >
-      <div
-        ref={boardRef}
-        role="group"
-        aria-label="Chess board"
-        onPointerDown={handlePointerDown}
-        onPointerMove={handlePointerMove}
-        onPointerUp={endGesture}
-        onPointerCancel={endGesture}
-        onClickCapture={handleClickCapture}
-        onKeyDown={handleKeyDown}
-        className={clsx(
-          "relative aspect-square w-full touch-none overflow-hidden rounded-md ring-1 ring-black/40",
-          "shadow-[0_18px_50px_-24px_rgba(0,0,0,0.9)]",
-          settings.animations && "transition-transform duration-[420ms] ease-[cubic-bezier(0.4,0,0.2,1)]",
-        )}
-        style={{ transform: flipped ? "rotate(180deg)" : undefined }}
-      >
-        <div className="grid h-full w-full grid-cols-8 grid-rows-8">
-          {SQUARES.map((square) => (
-            <ChessSquare
-              key={square}
-              square={square}
-              piece={position.pieceAt[square]}
-              isLight={isLightSquare(square)}
-              marks={marksFor[square] ?? EMPTY_MARKS}
-              checkEmphasis={assistance.checkEmphasis}
-              fileLabel={
-                settings.coordinates && rankIndex(square) === (flipped ? 0 : 7)
-                  ? square[0]
-                  : undefined
-              }
-              rankLabel={
-                settings.coordinates && fileIndex(square) === (flipped ? 7 : 0)
-                  ? square[1]
-                  : undefined
-              }
-              focusable={square === focusedSquare}
-              onSelect={onSelect}
-              onFocus={setFocusedSquare}
-            />
-          ))}
-        </div>
-
-        <div aria-hidden className="pointer-events-none absolute inset-0">
-          {position.pieces.map((piece) => (
-            <div
-              key={piece.id}
-              className={clsx(
-                "absolute top-0 left-0 h-[12.5%] w-[12.5%] p-[3%]",
-                settings.animations &&
-                  "transition-transform duration-[190ms] ease-[cubic-bezier(0.25,0.85,0.35,1)]",
-                drag?.from === piece.square && "opacity-25",
-              )}
-              style={{
-                transform: `translate(${fileIndex(piece.square) * 100}%, ${
-                  rankIndex(piece.square) * 100
-                }%)${flipped ? " rotate(180deg)" : ""}`,
-              }}
-            >
-              {/* The shake lives on an inner node so it cannot overwrite the
-                  transform that places the piece on its square. */}
-              <div
-                className={clsx(
-                  "size-full",
-                  rejection?.from === piece.square && "animate-shake",
-                )}
-              >
-                <ChessPiece piece={piece} style={settings.pieceStyle} />
-              </div>
+      <div className="board-slab">
+        <div className="board-frame">
+          <div
+            ref={boardRef}
+            role="group"
+            aria-label="Chess board"
+            onPointerDown={handlePointerDown}
+            onPointerMove={handlePointerMove}
+            onPointerUp={endGesture}
+            onPointerCancel={endGesture}
+            onClickCapture={handleClickCapture}
+            onKeyDown={handleKeyDown}
+            className={clsx(
+              "relative aspect-square w-full touch-none",
+              view3d ? "[transform-style:preserve-3d]" : "overflow-hidden rounded-[3px]",
+              settings.animations && "transition-transform duration-[600ms] ease-[cubic-bezier(0.65,0,0.35,1)]",
+            )}
+            style={{ transform: flipped ? "rotate(180deg)" : undefined }}
+          >
+            <div className="grid h-full w-full grid-cols-8 grid-rows-8 overflow-hidden rounded-[3px]">
+              {SQUARES.map((square) => (
+                <ChessSquare
+                  key={square}
+                  square={square}
+                  piece={position.pieceAt[square]}
+                  isLight={isLightSquare(square)}
+                  marks={marksFor[square] ?? EMPTY_MARKS}
+                  checkEmphasis={assistance.checkEmphasis}
+                  fileLabel={
+                    settings.coordinates && rankIndex(square) === (flipped ? 0 : 7)
+                      ? square[0]
+                      : undefined
+                  }
+                  rankLabel={
+                    settings.coordinates && fileIndex(square) === (flipped ? 7 : 0)
+                      ? square[1]
+                      : undefined
+                  }
+                  focusable={square === focusedSquare}
+                  onSelect={onSelect}
+                  onFocus={setFocusedSquare}
+                />
+              ))}
             </div>
-          ))}
+
+            <div
+              aria-hidden
+              className="board-pieces pointer-events-none absolute inset-0"
+              style={view3d ? { transform: "translateZ(1px)" } : undefined}
+            >
+              {position.pieces.map((piece, index) => (
+                <div
+                  key={piece.id}
+                  className={clsx(
+                    "board-piece absolute top-0 left-0 h-[12.5%] w-[12.5%]",
+                    settings.animations &&
+                      "transition-transform duration-[220ms] ease-[cubic-bezier(0.25,0.85,0.35,1)]",
+                    drag?.from === piece.square && "opacity-25",
+                  )}
+                  style={{ transform: placement(piece.square) }}
+                >
+                  {view3d && <span className="board-shadow" />}
+                  <div className="board-stand size-full p-[4%]">
+                    {/* Keyed by square so the hop replays on every move of this piece. */}
+                    <div
+                      key={piece.square}
+                      className={clsx(
+                        "size-full",
+                        settings.animations && intro && "animate-drop",
+                        settings.animations && !intro && lastTo === piece.square && "animate-hop",
+                      )}
+                      style={intro ? { animationDelay: `${180 + index * 22}ms` } : undefined}
+                    >
+                      {/* The shake lives on its own node so it cannot overwrite the
+                          transforms that place and stand the piece. */}
+                      <div
+                        className={clsx(
+                          "size-full origin-[50%_88%]",
+                          rejection?.from === piece.square && "animate-shake",
+                          settings.animations && piece.type === "k" && piece.color === mated && "animate-topple",
+                        )}
+                      >
+                        <ChessPiece piece={piece} style={settings.pieceStyle} />
+                      </div>
+                    </div>
+                  </div>
+
+                  {assistance.pieceNames && !drag && piece.square === activeSquare && activePiece && (
+                    <span className="absolute top-full left-1/2 z-10 -mt-[0.7rem] -translate-x-1/2 rounded-full bg-canvas/90 px-2 py-0.5 text-[0.75rem] font-semibold whitespace-nowrap text-ink">
+                      {PIECE_NAMES[activePiece.type]}
+                    </span>
+                  )}
+                </div>
+              ))}
+
+              {taken.map((piece) => (
+                <div
+                  key={`taken-${piece.id}`}
+                  className="board-piece absolute top-0 left-0 h-[12.5%] w-[12.5%]"
+                  style={{ transform: placement(piece.square) }}
+                >
+                  <div className="board-stand size-full p-[4%]">
+                    <div className="size-full animate-taken" onAnimationEnd={() => setTaken([])}>
+                      <ChessPiece piece={piece} style={settings.pieceStyle} />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
-      {/* Coordinates and the drag ghost live outside the rotated board so they
-          need no counter-rotation maths. */}
-      {assistance.pieceNames && activeSquare && position.pieceAt[activeSquare] && !drag && (
-        <span
-          aria-hidden
-          className="pointer-events-none absolute z-10 -translate-x-1/2 rounded-full bg-canvas/85 px-2 py-0.5 text-[0.6875rem] font-semibold text-ink ring-1 ring-line"
-          style={labelPosition(activeSquare, flipped)}
-        >
-          {PIECE_NAMES[position.pieceAt[activeSquare]!.type]}
-        </span>
-      )}
-
+      {/* The drag ghost follows the pointer in screen space, outside the tilted slab. */}
       {drag && draggedPiece && (
         <div
           aria-hidden
@@ -309,13 +372,13 @@ export function ChessBoard({
             width: drag.size,
             height: drag.size,
             left: drag.x - drag.left - drag.size / 2,
-            top: drag.y - drag.top - drag.size / 2,
+            top: drag.y - drag.top - drag.size * 0.75,
           }}
         >
           <ChessPiece
             piece={draggedPiece}
             style={settings.pieceStyle}
-            className="scale-[1.08] [filter:drop-shadow(0_6px_10px_rgba(0,0,0,0.5))]"
+            className="scale-[1.12] [filter:drop-shadow(0_14px_12px_rgba(0,0,0,0.55))]"
           />
         </div>
       )}
@@ -348,23 +411,14 @@ function clamp(value: number): number {
 }
 
 function measureBoard(
-  element: HTMLDivElement | null,
+  board: HTMLDivElement | null,
+  camera: HTMLDivElement | null,
 ): { left: number; top: number; size: number } | null {
-  if (!element) return null;
-  const rect = element.getBoundingClientRect();
+  if (!board || !camera) return null;
+  const rect = board.getBoundingClientRect();
   if (rect.width === 0) return null;
-  return { left: rect.left, top: rect.top, size: rect.width / 8 };
-}
-
-/** Positions the Beginner name chip just below the piece it describes. */
-function labelPosition(square: Square, flipped: boolean): React.CSSProperties {
-  const file = flipped ? 7 - fileIndex(square) : fileIndex(square);
-  const rank = flipped ? 7 - rankIndex(square) : rankIndex(square);
-  return {
-    left: `${(file + 0.5) * 12.5}%`,
-    top: `${(rank + 1) * 12.5}%`,
-    marginTop: "-0.7rem",
-  };
+  const origin = camera.getBoundingClientRect();
+  return { left: origin.left, top: origin.top, size: rect.width / 8 };
 }
 
 interface MarkInput {

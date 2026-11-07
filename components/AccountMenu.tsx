@@ -51,7 +51,7 @@ export function AccountMenu() {
         </Link>
         <Link
           href={loginHref(next, "signup")}
-          className="hidden h-8 items-center rounded-md bg-accent px-3 text-[0.8125rem] font-semibold text-[#231a0c] hover:bg-[#dcb673] sm:inline-flex"
+          className="hidden h-8 items-center rounded-md bg-accent px-3 text-[0.8125rem] font-semibold text-[#1f170a] hover:bg-[#e2b970] sm:inline-flex"
         >
           Sign up
         </Link>
@@ -93,7 +93,7 @@ export function AccountMenu() {
           id={menuId}
           role="menu"
           aria-label="Account"
-          className="absolute right-0 z-30 mt-2 w-52 animate-rise overflow-hidden rounded-xl border border-line bg-surface py-1.5 shadow-[0_12px_32px_rgba(0,0,0,0.45)]"
+          className="absolute right-0 z-30 mt-2 w-52 animate-rise overflow-hidden rounded-lg border border-line bg-surface py-1.5 shadow-[0_12px_32px_rgba(0,0,0,0.45)]"
         >
           <p className="truncate border-b border-line px-3.5 pt-1 pb-2.5 text-xs text-muted">
             Signed in as <span className="font-medium text-ink">{name}</span>

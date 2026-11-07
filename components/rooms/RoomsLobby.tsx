@@ -326,7 +326,7 @@ function HostedRoom({
       <p className="eyebrow">{room.status === "started" ? "Opponent joined" : "Waiting for player to join…"}</p>
       <h2 className="mt-2 text-xl font-semibold">{room.name}</h2>
 
-      <div className="mt-6 rounded-xl border border-line bg-surface p-5">
+      <div className="mt-6 rounded-lg border border-line bg-surface p-5">
         <p className="eyebrow">Room ID</p>
         <p className="numeric mt-1 text-4xl font-semibold tracking-[0.25em] text-accent">{room.code}</p>
         <dl className="mt-5 grid grid-cols-3 gap-3 border-t border-line pt-4 text-sm">
@@ -467,7 +467,7 @@ function RoomBrowser({ onJoin }: { onJoin: (code: string) => void }) {
       )}
 
       {visible.length === 0 ? (
-        <div className="mt-5 rounded-xl border border-dashed border-line px-4 py-10 text-center">
+        <div className="mt-5 rounded-lg border border-dashed border-line px-4 py-10 text-center">
           <p className="text-sm font-medium">
             {status === "loading" && rooms.length === 0
               ? "Loading rooms…"
@@ -494,7 +494,7 @@ function RoomBrowser({ onJoin }: { onJoin: (code: string) => void }) {
 
 function RoomCard({ room, onJoin }: { room: RoomSummary; onJoin: () => void }) {
   return (
-    <article className="flex h-full animate-rise flex-col rounded-xl border border-line bg-surface p-4 transition-colors hover:border-line-strong">
+    <article className="flex h-full animate-rise flex-col rounded-lg border border-line bg-surface p-4 transition-colors hover:border-line-strong">
       <div className="flex items-start justify-between gap-2">
         <h3 className="min-w-0 truncate font-semibold">{room.name}</h3>
         <LockIcon className="size-4 shrink-0 text-faint" />

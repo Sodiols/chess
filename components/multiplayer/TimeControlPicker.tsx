@@ -13,7 +13,7 @@ export function TimeControlPicker({ value, onChange }: { value: string; onChange
       options={ONLINE_TIME_CONTROLS.map((entry) => ({
         value: entry.id,
         label: entry.label,
-        visual: <span className="text-[0.625rem] tracking-wide text-faint uppercase">{entry.group}</span>,
+        visual: <span className="text-xs text-faint">{entry.group}</span>,
       }))}
     />
   );

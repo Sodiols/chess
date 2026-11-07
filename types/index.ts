@@ -87,6 +87,8 @@ export interface GameSettings {
   sound: boolean;
   coordinates: boolean;
   animations: boolean;
+  /** Tilts the board into a 3D slab with standing pieces. */
+  board3d: boolean;
   boardTheme: BoardThemeId;
   pieceStyle: PieceStyleId;
   showCaptured: boolean;

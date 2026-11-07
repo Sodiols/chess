@@ -69,6 +69,12 @@ export function SettingsPanel({ settings, onChange, context = "game" }: Settings
           onChange={(coordinates) => onChange({ coordinates })}
         />
         <Toggle
+          label="3D board"
+          hint="Tilts the board and stands the pieces up."
+          checked={settings.board3d}
+          onChange={(board3d) => onChange({ board3d })}
+        />
+        <Toggle
           label="Move animations"
           checked={settings.animations}
           onChange={(animations) => onChange({ animations })}

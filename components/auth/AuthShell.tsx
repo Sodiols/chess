@@ -73,7 +73,7 @@ export function Field({ label, value, onChange, error, hint, type = "text", ...r
             onClick={() => setRevealed((value) => !value)}
             aria-pressed={revealed}
             aria-label={revealed ? `Hide ${label.toLowerCase()}` : `Show ${label.toLowerCase()}`}
-            className="absolute inset-y-1 right-1 rounded-md px-2.5 text-xs text-muted hover:bg-[#26262b] hover:text-ink"
+            className="absolute inset-y-1 right-1 rounded-md px-2.5 text-xs text-muted hover:bg-[#282724] hover:text-ink"
           >
             {revealed ? "Hide" : "Show"}
           </button>

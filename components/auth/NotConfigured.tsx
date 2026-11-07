@@ -15,7 +15,7 @@ export function NotConfigured() {
       }
     >
       <div className="flex flex-wrap gap-2">
-        <Link href="/play/computer" className="rounded-lg bg-raised px-4 py-2 text-sm text-ink hover:bg-[#26262b]">
+        <Link href="/play/computer" className="rounded-lg bg-raised px-4 py-2 text-sm text-ink hover:bg-[#282724]">
           Play computer
         </Link>
         <Link href="/play/local" className="rounded-lg px-4 py-2 text-sm text-muted hover:bg-raised hover:text-ink">

@@ -48,15 +48,14 @@ export function ProfileView() {
           <>
             <header className="flex flex-wrap items-end justify-between gap-4">
               <div>
-                <p className="eyebrow">Profile</p>
-                <h1 className="mt-1 text-2xl font-bold sm:text-[1.75rem]">{state.profile.username ?? "New player"}</h1>
+                <h1 className="text-[1.75rem] font-extrabold sm:text-[2rem]">{state.profile.username ?? "New player"}</h1>
                 <p className="mt-1 text-sm text-muted">
                   Member since {DATE.format(new Date(auth.user.created_at ?? state.profile.createdAt))}
                 </p>
               </div>
               <Link
                 href="/play"
-                className="inline-flex h-10 items-center rounded-lg bg-accent px-4 text-sm font-semibold text-[#231a0c] hover:bg-[#dcb673]"
+                className="inline-flex h-10 items-center rounded-lg bg-accent px-4 text-sm font-semibold text-[#1f170a] hover:bg-[#e2b970]"
               >
                 Play
               </Link>
@@ -150,7 +149,7 @@ function Stats() {
         </h2>
         <dl className="grid grid-cols-2 gap-3 sm:grid-cols-5">
           {tiles.map((tile) => (
-            <div key={tile.label} className="rounded-xl border border-line bg-surface px-4 py-3">
+            <div key={tile.label} className="rounded-lg border border-line bg-surface px-4 py-3">
               <dt className="eyebrow">{tile.label}</dt>
               <dd className="numeric mt-1 text-2xl font-semibold">{tile.value}</dd>
             </div>
@@ -164,12 +163,12 @@ function Stats() {
           Recent games
         </h2>
         {recent.length === 0 ? (
-          <div className="mt-4 rounded-xl border border-dashed border-line px-4 py-10 text-center">
+          <div className="mt-4 rounded-lg border border-dashed border-line px-4 py-10 text-center">
             <p className="text-sm font-medium">No completed online games yet.</p>
             <p className="mt-1 text-xs text-faint">Finished games appear here with their result.</p>
           </div>
         ) : (
-          <ul className="mt-4 divide-y divide-line rounded-xl border border-line bg-surface">
+          <ul className="mt-4 divide-y divide-line rounded-lg border border-line bg-surface">
             {recent.map((game) => (
               <li key={game.id} className="flex items-center gap-3 px-4 py-3 text-sm">
                 <span

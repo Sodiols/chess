@@ -19,7 +19,7 @@ interface OnlineGateProps {
 
 const linkClass = "rounded-lg px-4 py-2 text-sm text-muted hover:bg-raised hover:text-ink";
 const primaryLinkClass =
-  "inline-flex h-10 items-center rounded-lg bg-accent px-4 text-sm font-semibold text-[#231a0c] hover:bg-[#dcb673]";
+  "inline-flex h-10 items-center rounded-lg bg-accent px-4 text-sm font-semibold text-[#1f170a] hover:bg-[#e2b970]";
 
 /**
  * Online screens need a signed-in account with a username. Signed-out visitors
@@ -40,7 +40,7 @@ export function OnlineGate({ children, bare = false }: OnlineGateProps) {
         This copy of Gambit has no Supabase project configured. Offline modes still work —
         see <code className="numeric text-ink">SUPABASE.md</code> to enable online play.
         <div className="mt-5 flex justify-center gap-2">
-          <Link href="/play/computer" className="rounded-lg bg-raised px-4 py-2 text-sm text-ink hover:bg-[#26262b]">
+          <Link href="/play/computer" className="rounded-lg bg-raised px-4 py-2 text-sm text-ink hover:bg-[#282724]">
             Play computer
           </Link>
           <Link href="/play/local" className={linkClass}>
@@ -112,11 +112,11 @@ export function OnlineGate({ children, bare = false }: OnlineGateProps) {
 
 export function ResumeBanner({ gameId }: { gameId: string }) {
   return (
-    <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-accent/50 bg-accent-soft/50 px-4 py-3">
+    <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-lg border border-accent/50 bg-accent-soft/50 px-4 py-3">
       <p className="text-sm">You have a game in progress. Finish it before starting another.</p>
       <Link
         href={`/game/${gameId}`}
-        className="rounded-md bg-accent px-3 py-1.5 text-[0.8125rem] font-semibold text-[#231a0c] hover:bg-[#dcb673]"
+        className="rounded-md bg-accent px-3 py-1.5 text-[0.8125rem] font-semibold text-[#1f170a] hover:bg-[#e2b970]"
       >
         Resume game
       </Link>

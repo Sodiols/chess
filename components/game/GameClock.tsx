@@ -28,13 +28,12 @@ export function GameClock({ clock, color }: GameClockProps) {
       role="timer"
       aria-label={`${color === "w" ? "White" : "Black"} clock`}
       className={clsx(
-        "numeric rounded-md px-2.5 py-1 text-[1.0625rem] leading-tight font-medium tabular-nums transition-colors duration-200 sm:text-xl",
+        "numeric rounded-md px-3 py-1 text-[1.25rem] leading-tight font-semibold tabular-nums transition-colors duration-300 sm:text-[1.5rem]",
         active && !paused
           ? low
-            ? "bg-danger-soft text-[#f2a79e]"
-            : "bg-raised text-ink"
-          : "text-faint",
-        low && "font-semibold",
+            ? "bg-danger text-[#1a0b09]"
+            : "bg-ink text-canvas"
+          : "bg-canvas/60 text-faint",
       )}
     >
       {formatClock(time)}

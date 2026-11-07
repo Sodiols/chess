@@ -31,7 +31,8 @@ export function MiniBoard({ fen, from, marks = [], pieceStyle = "classic", label
 
   return (
     <div
-      className="grid aspect-square w-full grid-cols-8 grid-rows-8 overflow-hidden rounded ring-1 ring-black/40"
+      data-ui
+      className="grid aspect-square w-full grid-cols-8 grid-rows-8 overflow-hidden rounded-[3px]"
       role="img"
       aria-label={label}
       style={

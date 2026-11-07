@@ -86,7 +86,7 @@ export const ChessSquare = memo(function ChessSquare({
       )}
     >
       {marks.check && (
-        <span aria-hidden className="absolute inset-0" style={{ background: checkMark(checkEmphasis) }} />
+        <span aria-hidden className="absolute inset-0 animate-check" style={{ background: checkMark(checkEmphasis) }} />
       )}
       {wash && <span aria-hidden className="absolute inset-0" style={{ backgroundColor: wash }} />}
       {overlay && <span aria-hidden className="absolute inset-0" style={{ background: overlay }} />}

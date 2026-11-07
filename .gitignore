@@ -10,3 +10,6 @@ next-env.d.ts
 # Playwright
 /test-results/
 /playwright-report/
+
+# design inspector screenshots
+.taste-skill/

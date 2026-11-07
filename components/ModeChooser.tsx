@@ -51,10 +51,10 @@ export function ModeChooser() {
               <button
                 type="button"
                 onClick={() => start(mode)}
-                className="flex w-full items-baseline justify-between gap-3 rounded-lg border border-line bg-raised px-3.5 py-3 text-left transition-colors hover:border-accent hover:bg-accent-soft"
+                className="press flex w-full items-baseline justify-between gap-3 rounded-md border border-line bg-raised px-4 py-3.5 text-left hover:border-accent hover:bg-accent-soft"
               >
                 <span className="text-sm font-semibold">{MODE_DETAILS[mode].name}</span>
-                <span className="text-xs text-muted">{MODE_DETAILS[mode].summary}</span>
+                <span className="text-[0.8125rem] text-muted">{MODE_DETAILS[mode].summary}</span>
               </button>
             </li>
           ))}
@@ -63,7 +63,7 @@ export function ModeChooser() {
         <button
           type="button"
           onClick={dismissOnboarding}
-          className="mt-4 w-full text-center text-xs text-faint transition-colors hover:text-muted"
+          className="mt-4 w-full py-2 text-center text-[0.8125rem] text-muted transition-colors hover:text-ink"
         >
           Skip — I’ll look around first
         </button>

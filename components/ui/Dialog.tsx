@@ -66,7 +66,7 @@ export function Dialog({
             "border border-line bg-surface p-5 shadow-[0_24px_60px_-12px_rgba(0,0,0,0.7)] sm:p-6",
             placement === "bottom"
               ? "animate-slide-up rounded-t-2xl pb-[max(1.25rem,env(safe-area-inset-bottom))]"
-              : "animate-rise rounded-xl",
+              : "animate-rise rounded-lg",
           )}
         >
           <h2 id={titleId} className="text-lg font-semibold">

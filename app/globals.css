@@ -1,29 +1,39 @@
 @import "tailwindcss";
 
 @theme {
-  --color-canvas: #101012;
-  --color-surface: #17171a;
-  --color-raised: #1f1f23;
-  --color-line: #2a2a30;
-  --color-line-strong: #3a3a42;
-  --color-ink: #ecebe8;
-  --color-muted: #9d9a95;
-  --color-faint: #6d6a66;
-  --color-accent: #d2a862;
-  --color-accent-soft: #3a2f1c;
-  --color-danger: #cf6055;
-  --color-danger-soft: #3a1f1c;
-  --color-positive: #7fa86a;
+  /* One ground, tone steps for surfaces, one brass accent. Every grey that carries
+     words reaches 4.5:1 on the surface it sits on. */
+  --color-canvas: #0e0e0d;
+  --color-surface: #161615;
+  --color-raised: #1f1e1c;
+  --color-line: #262523;
+  --color-line-strong: #3a3935;
+  --color-ink: #f1efea;
+  --color-muted: #b3afa7;
+  --color-faint: #96918a;
+  --color-accent: #d6ab62;
+  --color-accent-soft: #33291a;
+  --color-danger: #d4685c;
+  --color-danger-soft: #3a1e1b;
+  --color-positive: #8fb87a;
 
   --font-sans: var(--font-manrope), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-plex-mono), ui-monospace, monospace;
 
-  --radius-panel: 0.75rem;
+  --radius-panel: 0.5rem;
+
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
 
   --animate-shake: shake 0.32s cubic-bezier(0.36, 0.07, 0.19, 0.97);
-  --animate-rise: rise 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-rise: rise 0.32s var(--ease-out-expo);
   --animate-fade: fade 0.18s ease-out;
-  --animate-slide-up: slide-up 0.26s cubic-bezier(0.16, 1, 0.3, 1);
+  --animate-slide-up: slide-up 0.32s var(--ease-out-expo);
+  --animate-hop: hop 0.34s cubic-bezier(0.3, 0.7, 0.4, 1);
+  --animate-taken: taken 0.42s cubic-bezier(0.5, 0, 0.75, 0) forwards;
+  --animate-check: check-pulse 1.2s ease-in-out 3;
+  --animate-enter: enter 0.7s var(--ease-out-expo) backwards;
+  --animate-drop: drop 0.6s var(--ease-out-expo) backwards;
+  --animate-topple: topple 0.9s cubic-bezier(0.5, 0, 0.2, 1) 0.35s forwards;
 }
 
 @keyframes slide-up {
@@ -58,7 +68,7 @@
 @keyframes rise {
   from {
     opacity: 0;
-    transform: translateY(6px) scale(0.985);
+    transform: translateY(10px) scale(0.98);
   }
   to {
     opacity: 1;
@@ -75,10 +85,64 @@
   }
 }
 
+/* A moved piece is lifted off the board and set down again. */
+@keyframes hop {
+  0% {
+    transform: translateY(-22%) scale(1.06);
+  }
+  70% {
+    transform: translateY(2%) scale(0.98);
+  }
+  100% {
+    transform: none;
+  }
+}
+
+/* A captured piece is knocked over and leaves the board. */
+@keyframes taken {
+  0% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-30%) rotate(-24deg) scale(0.6);
+  }
+}
+
+@keyframes check-pulse {
+  50% {
+    opacity: 0.55;
+  }
+}
+
+@keyframes enter {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+}
+
+/* The mated king tips over. */
+@keyframes topple {
+  to {
+    transform: rotate(-78deg) translateX(-8%);
+  }
+}
+
+/* Pieces set down onto the hero board on first load. */
+@keyframes drop {
+  from {
+    opacity: 0;
+    transform: translateY(-60%);
+  }
+}
+
 @layer base {
   html {
     -webkit-text-size-adjust: 100%;
     -webkit-tap-highlight-color: transparent;
+    color-scheme: dark;
   }
 
   body {
@@ -93,7 +157,15 @@
   h1,
   h2,
   h3 {
-    letter-spacing: -0.022em;
+    letter-spacing: -0.025em;
+    text-wrap: balance;
+  }
+
+  button,
+  a,
+  label,
+  summary {
+    touch-action: manipulation;
   }
 
   :focus-visible {
@@ -106,8 +178,12 @@
     background: color-mix(in oklab, var(--color-accent) 35%, transparent);
   }
 
+  dialog {
+    overscroll-behavior: contain;
+  }
+
   dialog::backdrop {
-    background: rgba(6, 6, 8, 0.72);
+    background: rgba(6, 6, 5, 0.76);
   }
 }
 
@@ -118,13 +194,11 @@
     border-radius: var(--radius-panel);
   }
 
-  /* Small caps label used for section headers throughout the game screen. */
+  /* Field and figure labels: sentence case at a readable size. */
   .eyebrow {
-    font-size: 0.6875rem;
-    font-weight: 600;
-    letter-spacing: 0.09em;
-    text-transform: uppercase;
-    color: var(--color-faint);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--color-muted);
   }
 
   .numeric {
@@ -134,10 +208,94 @@
 
   .board-coordinate {
     font-family: var(--font-mono);
-    font-weight: 500;
-    opacity: 0.72;
+    font-weight: 600;
+    opacity: 0.8;
     line-height: 1;
     pointer-events: none;
+  }
+
+  /* Pressed controls give way under the finger. */
+  .press {
+    transition-property: color, background-color, border-color, transform;
+    transition-duration: 160ms;
+    transition-timing-function: var(--ease-out-expo);
+  }
+  .press:active:not(:disabled) {
+    transform: scale(0.97);
+  }
+
+  /* ---- The 3D board ---------------------------------------------------- */
+
+  /* The camera. Children opt into 3D; nothing outside the board is transformed. */
+  .board-camera {
+    /* Pages can steer the camera (the landing board follows the pointer). */
+    --tilt: var(--board-tilt, 24deg);
+    --yaw: var(--board-yaw, 0deg);
+    perspective: 1500px;
+    perspective-origin: 50% 30%;
+  }
+
+  /* The slab: the board tilted away from the player, with the frame as its rim. */
+  .board-slab {
+    transform-style: preserve-3d;
+    transform: rotateX(var(--tilt, 0deg)) rotateZ(var(--yaw, 0deg));
+    transform-origin: 50% 62%;
+    transition: transform 0.5s var(--ease-out-expo);
+  }
+
+  .board-frame {
+    position: relative;
+    transform-style: preserve-3d;
+    padding: 2.4%;
+    border-radius: 0.5rem;
+    background-color: var(--board-rim);
+  }
+
+  /* The board's front edge, so the slab has a thickness when tilted. */
+  .board-frame::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 100%;
+    height: 3.2%;
+    border-radius: 0 0 0.5rem 0.5rem;
+    background-color: var(--board-edge);
+    transform-origin: top;
+    transform: rotateX(-90deg);
+  }
+
+  .board-3d .board-pieces,
+  .board-3d .board-piece {
+    transform-style: preserve-3d;
+  }
+
+  /* Each piece turns back up to face the player, standing on its square. */
+  .board-3d .board-stand {
+    transform-origin: 50% 88%;
+    transform: rotateZ(calc(-1 * var(--yaw))) rotateX(calc(-1 * var(--tilt)));
+    transition: transform 0.5s var(--ease-out-expo);
+  }
+
+  .board-shadow {
+    position: absolute;
+    left: 22%;
+    right: 22%;
+    bottom: 9%;
+    height: 14%;
+    border-radius: 9999px;
+    background-color: rgba(0, 0, 0, 0.32);
+    filter: blur(2px);
+  }
+
+  /* Scroll-driven entrances where the browser supports them; content is visible
+     everywhere else, including without script. */
+  @supports (animation-timeline: view()) {
+    .reveal {
+      animation: enter linear both;
+      animation-timeline: view();
+      animation-range: entry 0% entry 40%;
+    }
   }
 }
 
@@ -148,5 +306,8 @@
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
+  }
+  .reveal {
+    animation: none !important;
   }
 }

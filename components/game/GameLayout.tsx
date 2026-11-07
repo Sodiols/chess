@@ -30,8 +30,8 @@ export function GameLayout({
   showMoveHistory,
 }: GameLayoutProps) {
   return (
-    <div className="mx-auto w-full max-w-[92rem] px-3 pb-4 sm:px-5 lg:px-8">
-      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_22rem] lg:gap-8">
+    <div className="mx-auto w-full max-w-[92rem] px-3 pt-2 pb-6 sm:px-6 lg:px-8 lg:pt-4">
+      <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_23rem] lg:gap-10">
         {/* Board column */}
         <div className="flex flex-col gap-2.5">
           <div className="lg:hidden">{top}</div>
@@ -50,23 +50,23 @@ export function GameLayout({
         </div>
 
         {/* Side panel — desktop only; phones use the drawer instead. */}
-        <aside className="panel hidden max-h-[calc(100dvh-7rem)] flex-col overflow-hidden lg:flex">
-          <header className="flex items-baseline justify-between gap-2 border-b border-line px-3 py-2.5">
-            <span className="truncate text-sm font-semibold">{title}</span>
-            <span className="numeric shrink-0 text-[0.6875rem] text-faint">{subtitle}</span>
+        <aside className="hidden max-h-[calc(100dvh-7rem)] animate-rise flex-col overflow-hidden rounded-lg bg-surface lg:flex">
+          <header className="flex items-baseline justify-between gap-2 px-4 pt-4 pb-2">
+            <span className="truncate text-base font-bold">{title}</span>
+            <span className="numeric shrink-0 text-xs text-muted">{subtitle}</span>
           </header>
 
           <div className="p-2">{top}</div>
 
           {showMoveHistory ? (
-            <MoveHistory history={history} className="min-h-32 flex-1 border-y border-line py-1" />
+            <MoveHistory history={history} className="mx-2 min-h-32 flex-1 rounded-md bg-canvas/50 py-1.5" />
           ) : (
-            <div className="flex-1 border-y border-line" />
+            <div className="flex-1" />
           )}
 
           <div className="p-2">{bottom}</div>
 
-          <div className="border-t border-line p-2">{controls(false)}</div>
+          <div className="p-2 pt-1">{controls(false)}</div>
         </aside>
       </div>
     </div>

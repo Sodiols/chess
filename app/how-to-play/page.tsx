@@ -208,8 +208,7 @@ export default function HowToPlayPage() {
       <Navbar />
 
       <main className="mx-auto max-w-4xl px-4 pt-10 pb-16 sm:px-5 lg:pt-14">
-        <p className="eyebrow">The rules</p>
-        <h1 className="mt-3 text-3xl font-bold sm:text-[2.25rem]">How to play chess</h1>
+        <h1 className="animate-enter text-[2.5rem] leading-[1.02] font-extrabold sm:text-[3.5rem]">How to play chess</h1>
         <p className="mt-4 max-w-2xl text-[1.0625rem] leading-relaxed text-muted">
           Everything you need to sit down and play a full game. Beginner mode shows
           all of this on the board as you go, so you do not have to memorise it.
@@ -220,19 +219,19 @@ export default function HowToPlayPage() {
             <a
               key={topic.id}
               href={`#${topic.id}`}
-              className="rounded-lg border border-line bg-surface px-3 py-1.5 text-[0.8125rem] text-muted transition-colors hover:border-line-strong hover:text-ink"
+              className="press rounded-md bg-raised px-3.5 py-2 text-sm font-medium text-muted hover:bg-[#282724] hover:text-ink"
             >
               {topic.heading}
             </a>
           ))}
         </nav>
 
-        <div className="mt-12 space-y-14">
+        <div className="mt-16 space-y-20">
           {TOPICS.map((topic) => (
             <section key={topic.id} id={topic.id} className="scroll-mt-20">
-              <h2 className="text-xl font-bold sm:text-2xl">{topic.heading}</h2>
+              <h2 className="reveal text-2xl font-extrabold sm:text-[2rem]">{topic.heading}</h2>
 
-              <div className="mt-3 max-w-2xl space-y-3 text-[0.9375rem] leading-relaxed text-muted">
+              <div className="mt-4 max-w-2xl space-y-3 text-base leading-relaxed text-ink">
                 {topic.body.map((paragraph) => (
                   <p key={paragraph}>{paragraph}</p>
                 ))}
@@ -247,9 +246,9 @@ export default function HowToPlayPage() {
                   }
                 >
                   {topic.diagrams.map(({ caption, diagram }) => (
-                    <li key={caption}>
+                    <li key={caption} className="reveal">
                       <MiniBoard {...diagram} />
-                      <p className="mt-2.5 text-[0.8125rem] leading-snug text-muted">{caption}</p>
+                      <p className="mt-3 text-sm leading-snug text-muted">{caption}</p>
                     </li>
                   ))}
                 </ul>
@@ -258,10 +257,10 @@ export default function HowToPlayPage() {
           ))}
         </div>
 
-        <div className="mt-16 border-t border-line pt-8">
+        <div className="mt-20">
           <Link
             href="/play"
-            className="inline-flex h-12 items-center rounded-lg bg-accent px-6 text-[0.9375rem] font-semibold text-[#231a0c] transition-colors hover:bg-[#dcb673]"
+            className="press inline-flex h-13 items-center rounded-md bg-accent px-7 text-base font-bold text-[#1f170a] hover:bg-[#e2b970]"
           >
             Start a game
           </Link>

@@ -39,7 +39,7 @@ export function AuthCallback({ next }: { next: string }) {
         </p>
         <Link
           href={`/login?next=${encodeURIComponent(next)}`}
-          className="inline-flex h-10 items-center rounded-lg bg-accent px-4 text-sm font-semibold text-[#231a0c] hover:bg-[#dcb673]"
+          className="inline-flex h-10 items-center rounded-lg bg-accent px-4 text-sm font-semibold text-[#1f170a] hover:bg-[#e2b970]"
         >
           Go to log in
         </Link>

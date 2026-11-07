@@ -13,13 +13,16 @@ interface BoardTheme {
   name: string;
   light: string;
   dark: string;
+  /** The frame around the squares, and the slab's front edge in 3D. */
+  rim: string;
+  edge: string;
 }
 
 export const BOARD_THEMES: BoardTheme[] = [
-  { id: "walnut", name: "Walnut", light: "#eadbc0", dark: "#a5764e" },
-  { id: "slate", name: "Slate", light: "#d3d9e0", dark: "#6c7f92" },
-  { id: "sage", name: "Sage", light: "#e9eccd", dark: "#779556" },
-  { id: "ivory", name: "Ivory", light: "#f2e8dc", dark: "#b28a63" },
+  { id: "walnut", name: "Walnut", light: "#eadbc0", dark: "#a5764e", rim: "#3d2818", edge: "#21150c" },
+  { id: "slate", name: "Slate", light: "#d3d9e0", dark: "#6c7f92", rim: "#2a3139", edge: "#171b20" },
+  { id: "sage", name: "Sage", light: "#e9eccd", dark: "#779556", rim: "#2f3a26", edge: "#1a2115" },
+  { id: "ivory", name: "Ivory", light: "#f2e8dc", dark: "#b28a63", rim: "#4a3524", edge: "#2b1e14" },
 ];
 
 export const PIECE_STYLES: { id: PieceStyleId; name: string }[] = [

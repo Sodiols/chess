@@ -21,13 +21,13 @@ export function Navbar({ variant = "full" }: NavbarProps) {
   return (
     <header
       className={clsx(
-        "sticky top-0 z-20 border-b border-line/80 bg-canvas/85 backdrop-blur-md",
+        "sticky top-0 z-20 bg-canvas",
         variant === "game" ? "h-13" : "h-15",
       )}
     >
       <nav
         aria-label="Main"
-        className="mx-auto flex h-full max-w-[92rem] items-center gap-3 px-3 sm:gap-6 sm:px-5 lg:px-8"
+        className="mx-auto flex h-full max-w-[92rem] items-center gap-3 px-4 sm:gap-6 sm:px-6 lg:px-8"
       >
         <Link href="/" className="shrink-0 rounded" aria-label="Gambit home">
           <Wordmark />
@@ -47,7 +47,7 @@ export function Navbar({ variant = "full" }: NavbarProps) {
             type="button"
             onClick={() => setSettingsOpen(true)}
             aria-label="Game settings"
-            className="flex size-9 items-center justify-center rounded-lg text-muted transition-colors hover:bg-raised hover:text-ink"
+            className="press flex size-10 items-center justify-center rounded-md text-muted hover:bg-raised hover:text-ink"
           >
             <GearIcon />
           </button>
@@ -70,7 +70,7 @@ function NavLink({ href, className, children }: { href: string; className?: stri
   return (
     <Link
       href={href}
-      className={clsx("rounded-lg px-3 py-1.5 text-sm text-muted transition-colors hover:bg-raised hover:text-ink", className)}
+      className={clsx("press rounded-md px-3 py-2 text-[0.9375rem] font-medium text-muted hover:bg-raised hover:text-ink", className)}
     >
       {children}
     </Link>

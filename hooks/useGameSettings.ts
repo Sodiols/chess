@@ -10,6 +10,7 @@ export const DEFAULT_SETTINGS: GameSettings = {
   sound: true,
   coordinates: true,
   animations: true,
+  board3d: true,
   boardTheme: "walnut",
   pieceStyle: "classic",
   showCaptured: true,
