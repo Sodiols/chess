@@ -84,7 +84,7 @@ export default function HomePage() {
       </main>
 
       <footer className="mx-auto max-w-[92rem] border-t border-line px-4 py-6 text-xs text-faint sm:px-5 lg:px-8">
-        Offline modes play entirely on this device. Online play uses a guest identity — no account needed.
+        Offline modes play entirely on this device. Online play needs a free Gambit account.
       </footer>
     </>
   );

@@ -11,8 +11,7 @@ export default defineConfig({
   timeout: 90_000,
   fullyParallel: false,
   use: { baseURL, trace: "retain-on-failure" },
-  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
-  webServer: process.env.E2E_BASE_URL
-    ? { command: "npm run dev", url: baseURL, reuseExistingServer: true, timeout: 120_000 }
-    : undefined,
+  // Runs against an app that is already up (`npm run dev`, or a deployed test build).
+  // E2E_CHANNEL=msedge (or chrome) uses an installed browser instead of `npx playwright install`.
+  projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"], channel: process.env.E2E_CHANNEL } }],
 });

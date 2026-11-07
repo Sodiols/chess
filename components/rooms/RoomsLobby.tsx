@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useMemo, useState, useSyncExternalStore } from "react";
+import { useEffect, useId, useMemo, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
 import { useHostedRoom } from "@/hooks/useHostedRoom";
@@ -17,6 +17,7 @@ import { TextField } from "@/components/ui/TextField";
 import { Toggle } from "@/components/ui/Toggle";
 import { CopyIcon, LockIcon, RefreshIcon } from "@/components/ui/icons";
 import { TimeControlPicker } from "@/components/multiplayer/TimeControlPicker";
+import { ResumeBanner } from "@/components/multiplayer/OnlineGate";
 
 const CODE_PATTERN = /^[A-HJ-NP-Z2-9]{6}$/;
 
@@ -26,8 +27,24 @@ export function RoomsLobby({ profile }: { profile: Profile }) {
   const hosted = useHostedRoom(profile.id, goToGame);
   const [joinCode, setJoinCode] = useState<string | null>(null);
 
+  // "Create Room" / "Join Room" links point at a section; it only exists once
+  // the account has loaded, after the browser's own anchor jump has passed.
+  useEffect(() => {
+    const target = window.location.hash.slice(1);
+    if (target) document.getElementById(target)?.scrollIntoView({ block: "start" });
+  }, []);
+
   if (hosted.room?.status === "waiting" || hosted.room?.status === "started") {
-    return <HostedRoom room={hosted.room} password={hosted.password} onCancel={() => void hosted.cancel()} />;
+    return (
+      <HostedRoom
+        room={hosted.room}
+        password={hosted.password}
+        cancelling={hosted.phase === "cancelling"}
+        error={hosted.error}
+        unreachable={hosted.unreachable}
+        onCancel={() => void hosted.cancel()}
+      />
+    );
   }
 
   return (
@@ -38,13 +55,25 @@ export function RoomsLobby({ profile }: { profile: Profile }) {
             Create a room
           </h2>
           <p className="mt-1 text-sm text-muted">Share the room ID and password with your opponent.</p>
-          <CreateRoomForm
-            nickname={profile.nickname}
-            busy={hosted.busy}
-            error={hosted.error ?? (hosted.room ? `Room ${hosted.room.status}.` : null)}
-            disabled={Boolean(profile.activeGameId)}
-            onCreate={hosted.create}
-          />
+          {hosted.phase === "restoring" ? (
+            <p className="mt-5 text-sm text-muted" role="status">
+              Checking for a room you already host…
+            </p>
+          ) : profile.activeGameId ? (
+            <div className="mt-5">
+              <ResumeBanner gameId={profile.activeGameId} />
+              <p className="text-xs text-faint">
+                You can host a room again once that game has finished.
+              </p>
+            </div>
+          ) : (
+            <CreateRoomForm
+              username={profile.username ?? profile.nickname}
+              busy={hosted.phase === "creating"}
+              error={hosted.error}
+              onCreate={hosted.create}
+            />
+          )}
         </section>
 
         <section aria-labelledby="join-heading" className="panel p-5 sm:p-6">
@@ -71,16 +100,14 @@ export function RoomsLobby({ profile }: { profile: Profile }) {
 }
 
 function CreateRoomForm({
-  nickname,
+  username,
   busy,
   error,
-  disabled,
   onCreate,
 }: {
-  nickname: string;
+  username: string;
   busy: boolean;
   error: string | null;
-  disabled: boolean;
   onCreate: ReturnType<typeof useHostedRoom>["create"];
 }) {
   const prefs = useSyncExternalStore(
@@ -92,13 +119,18 @@ function CreateRoomForm({
   const [password, setPassword] = useState("");
   const [color, setColor] = useState<"w" | "b" | "random">("random");
   const [discoverable, setDiscoverable] = useState(true);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
   const preset = onlineTimeControlById(prefs.timeControl);
   const passwordId = useId();
 
   const submit = (event: React.FormEvent) => {
     event.preventDefault();
+    if (busy) return;
+    const invalid = password.length < 4 || password.length > 64 ? "invalid_password" : null;
+    setPasswordError(invalid);
+    if (invalid) return;
     void onCreate({
-      name: name.trim() || `${nickname}'s room`,
+      name: name.trim() || `${username}'s room`,
       password,
       initialMs: preset.control.initialMs,
       incrementMs: preset.control.incrementMs,
@@ -108,9 +140,9 @@ function CreateRoomForm({
   };
 
   return (
-    <form onSubmit={submit} className="mt-5 space-y-5">
+    <form onSubmit={submit} noValidate className="mt-5 space-y-5">
       <div className="grid gap-3 sm:grid-cols-2">
-        <TextField label="Room name" value={name} placeholder={`${nickname}'s room`} maxLength={40} onChange={setName} />
+        <TextField label="Room name" value={name} placeholder={`${username}'s room`} maxLength={40} onChange={setName} />
         <div>
           <label htmlFor={passwordId} className="eyebrow mb-2 block">
             Password
@@ -118,14 +150,20 @@ function CreateRoomForm({
           <input
             id={passwordId}
             type="password"
-            required
-            minLength={4}
             maxLength={64}
             autoComplete="new-password"
             value={password}
+            aria-invalid={passwordError ? true : undefined}
+            aria-describedby={`${passwordId}-hint`}
             onChange={(event) => setPassword(event.target.value)}
-            className="h-10 w-full rounded-lg border border-line bg-raised px-3 text-sm hover:border-line-strong focus:border-accent focus:outline-none"
+            className={clsx(
+              "h-10 w-full rounded-lg border bg-raised px-3 text-sm hover:border-line-strong focus:border-accent focus:outline-none",
+              passwordError ? "border-[#8a3d33]" : "border-line",
+            )}
           />
+          <p id={`${passwordId}-hint`} className={clsx("mt-1.5 text-xs", passwordError ? "text-[#f0a49b]" : "text-faint")}>
+            {passwordError ? errorMessage(passwordError) : "4–64 characters. Share it with your opponent."}
+          </p>
         </div>
       </div>
 
@@ -156,8 +194,8 @@ function CreateRoomForm({
         </p>
       )}
 
-      <Button type="submit" variant="primary" size="lg" block disabled={busy || disabled || password.length < 4}>
-        {busy ? "Creating…" : "Create room"}
+      <Button type="submit" variant="primary" size="lg" block disabled={busy} aria-busy={busy}>
+        {busy ? "Creating room…" : "Create room"}
       </Button>
     </form>
   );
@@ -182,8 +220,13 @@ function JoinRoomForm({
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
+    if (busy) return;
     if (!CODE_PATTERN.test(normalized)) {
-      setError("room_not_found");
+      setError("invalid_room_code");
+      return;
+    }
+    if (!password) {
+      setError("password_required");
       return;
     }
     setBusy(true);
@@ -198,7 +241,7 @@ function JoinRoomForm({
   };
 
   return (
-    <form onSubmit={submit} className="mt-5 space-y-4">
+    <form onSubmit={submit} noValidate className="mt-5 space-y-4">
       <div>
         <label htmlFor={codeId} className="eyebrow mb-2 block">
           Room ID
@@ -234,14 +277,28 @@ function JoinRoomForm({
           {errorMessage(error)}
         </p>
       )}
-      <Button type="submit" variant="primary" block disabled={busy || !normalized || !password}>
+      <Button type="submit" variant="primary" block disabled={busy} aria-busy={busy}>
         {busy ? "Joining…" : "Join room"}
       </Button>
     </form>
   );
 }
 
-function HostedRoom({ room, password, onCancel }: { room: RoomSummary; password: string; onCancel: () => void }) {
+function HostedRoom({
+  room,
+  password,
+  cancelling,
+  error,
+  unreachable,
+  onCancel,
+}: {
+  room: RoomSummary;
+  password: string | null;
+  cancelling: boolean;
+  error: string | null;
+  unreachable: boolean;
+  onCancel: () => void;
+}) {
   const [copied, setCopied] = useState<"id" | "invite" | null>(null);
   const invite = [
     `Join my Gambit chess room "${room.name}"`,
@@ -299,7 +356,9 @@ function HostedRoom({ room, password, onCancel }: { room: RoomSummary; password:
         </Button>
       </div>
       <p className="mt-3 text-xs text-faint">
-        The invite includes the password you just set. Gambit stores only a hash of it.
+        {password
+          ? "The invite includes the password you just set. Gambit stores only a hash of it."
+          : "Gambit stores only a hash of the room password, so it can't be shown again after a refresh. Share the password you chose when creating the room."}
       </p>
 
       <span className="mt-8 inline-flex items-center gap-2 text-sm text-muted">
@@ -307,10 +366,20 @@ function HostedRoom({ room, password, onCancel }: { room: RoomSummary; password:
         {room.status === "started" ? "Starting game…" : "Waiting for an opponent"}
       </span>
 
+      {unreachable && room.status === "waiting" && (
+        <p role="status" className="mt-4 text-xs text-[#f0a49b]">
+          Can&rsquo;t reach the server. Retrying — the room stays open for two minutes without a connection.
+        </p>
+      )}
+      {error && (
+        <p role="alert" className="mt-4 text-sm text-[#f0a49b]">
+          {errorMessage(error)}
+        </p>
+      )}
       {room.status === "waiting" && (
         <div className="mt-6">
-          <Button variant="ghost" onClick={onCancel}>
-            Cancel room
+          <Button variant="ghost" onClick={onCancel} disabled={cancelling} aria-busy={cancelling}>
+            {cancelling ? "Cancelling…" : error ? "Try cancelling again" : "Cancel room"}
           </Button>
         </div>
       )}
@@ -342,13 +411,23 @@ function RoomBrowser({ onJoin }: { onJoin: (code: string) => void }) {
             Open rooms
           </h2>
           <p className="mt-1 flex items-center gap-2 text-sm text-muted">
-            <span aria-hidden className={clsx("size-1.5 rounded-full", live ? "bg-positive" : "bg-faint")} />
-            {live ? "Updating live" : "Connecting to live updates…"}
+            <span
+              aria-hidden
+              className={clsx(
+                "size-1.5 rounded-full",
+                live === "live" ? "bg-positive" : live === "offline" ? "bg-[#f0a49b]" : "bg-faint",
+              )}
+            />
+            {live === "live"
+              ? "Updating live"
+              : live === "offline"
+                ? "Live updates unavailable — use Refresh rooms"
+                : "Connecting to live updates…"}
           </p>
         </div>
-        <Button size="sm" onClick={() => void refresh()} disabled={status === "loading"}>
+        <Button size="sm" onClick={() => void refresh()} disabled={status === "loading"} aria-busy={status === "loading"}>
           <RefreshIcon />
-          Refresh rooms
+          {status === "loading" ? "Refreshing…" : "Refresh rooms"}
         </Button>
       </div>
 

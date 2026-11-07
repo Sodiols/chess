@@ -50,6 +50,9 @@ export function Matchmaking({ profile }: { profile: Profile }) {
       >
         Find opponent
       </Button>
+      {profile.activeGameId && (
+        <p className="text-center text-xs text-muted">Finish or resume your game in progress before searching again.</p>
+      )}
       <p className="text-center text-xs text-faint">
         You’ll be paired with the next player who picks {preset.label}. Colours are assigned at random.
       </p>

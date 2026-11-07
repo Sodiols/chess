@@ -8,6 +8,9 @@ import { usePlayerEvents } from "./usePlayerEvents";
 /** Keeps the queue entry alive (it expires after 45 s) and re-tries the match. */
 const HEARTBEAT_MS = 15_000;
 
+/** Failures worth riding out: the queue entry outlives one missed heartbeat. */
+const TRANSIENT = new Set(["network", "timeout", "try_again"]);
+
 type MatchResponse = { status: "waiting"; since: string } | { status: "matched"; gameId: string } | { status: "idle" };
 
 export type MatchmakingState =
@@ -24,6 +27,8 @@ export type MatchmakingState =
 export function useMatchmaking(playerId: string | null, onMatched: (gameId: string) => void) {
   const [state, setState] = useState<MatchmakingState>({ status: "idle" });
   const searching = useRef<TimeControl | null>(null);
+  /** The server has confirmed the queue entry at least once. */
+  const queued = useRef(false);
   const matchedRef = useRef(onMatched);
   useEffect(() => {
     matchedRef.current = onMatched;
@@ -43,12 +48,16 @@ export function useMatchmaking(playerId: string | null, onMatched: (gameId: stri
       const result = await api<MatchResponse>("/api/matchmaking", { method: "POST", body: control });
       if (searching.current !== control) return; // cancelled meanwhile
       if (!result.ok) {
+        // Mid-search, a blip mustn't drop the player while their queue entry
+        // lives on server-side: the next heartbeat retries.
+        if (queued.current && TRANSIENT.has(result.error)) return;
         searching.current = null;
         setState({ status: "idle", error: result.error });
         return;
       }
       if (result.status === "matched") finish(result.gameId);
       else if (result.status === "waiting") {
+        queued.current = true;
         setState((current) =>
           current.status === "searching" ? current : { status: "searching", control, since: Date.parse(result.since) },
         );
@@ -61,6 +70,7 @@ export function useMatchmaking(playerId: string | null, onMatched: (gameId: stri
     (control: TimeControl) => {
       if (searching.current) return; // repeated clicks don't queue twice
       searching.current = control;
+      queued.current = false;
       setState({ status: "joining", control });
       void send(control);
     },
@@ -76,6 +86,9 @@ export function useMatchmaking(playerId: string | null, onMatched: (gameId: stri
     if (result.ok && result.status === "matched") {
       searching.current = { initialMs: 0, incrementMs: 0 };
       finish(result.gameId);
+    } else if (!result.ok) {
+      // The entry couldn't be removed now; it lapses within 45 seconds anyway.
+      setState({ status: "idle", error: result.error });
     }
   }, [finish]);
 

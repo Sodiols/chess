@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { api, ensureSession } from "@/lib/multiplayer/client";
+import { api } from "@/lib/multiplayer/client";
 import type { RoomSummary } from "@/lib/multiplayer/types";
 import { getBrowserClient } from "@/lib/supabase/browser";
 
@@ -22,6 +22,24 @@ export function mergeRoom(rooms: RoomSummary[], room: RoomSummary, random = Math
   return [...rooms.slice(0, at), room, ...rooms.slice(at)];
 }
 
+/**
+ * Folds a fresh server list into what's on screen: rooms still open keep their
+ * place (with updated details), closed ones go, new ones land at random spots.
+ * A refresh — including the automatic one after reconnecting — never reshuffles
+ * the list under the reader.
+ */
+export function reconcileRooms(current: RoomSummary[], fresh: RoomSummary[], random = Math.random): RoomSummary[] {
+  const byCode = new Map(fresh.map((room) => [room.code, room]));
+  const kept = current.flatMap((room) => {
+    const latest = byCode.get(room.code);
+    return latest && isOpen(latest) ? [latest] : [];
+  });
+  const shown = new Set(kept.map((room) => room.code));
+  return fresh.filter((room) => !shown.has(room.code)).reduce((list, room) => mergeRoom(list, room, random), kept);
+}
+
+export type LiveStatus = "connecting" | "live" | "offline";
+
 type BrowserState =
   | { status: "loading"; rooms: RoomSummary[] }
   | { status: "ready"; rooms: RoomSummary[] }
@@ -30,7 +48,7 @@ type BrowserState =
 /** Discoverable waiting rooms, kept current over the `rooms` Realtime topic. */
 export function useRoomBrowser(enabled: boolean) {
   const [state, setState] = useState<BrowserState>({ status: "loading", rooms: [] });
-  const [live, setLive] = useState(false);
+  const [live, setLive] = useState<LiveStatus>("connecting");
 
   const refresh = useCallback(async () => {
     setState((current) => ({ status: "loading", rooms: current.rooms }));
@@ -38,7 +56,7 @@ export function useRoomBrowser(enabled: boolean) {
     const result = await api<{ rooms: RoomSummary[] }>("/api/rooms");
     setState((current) =>
       result.ok
-        ? { status: "ready", rooms: result.rooms.filter((room) => isOpen(room)) }
+        ? { status: "ready", rooms: reconcileRooms(current.rooms, result.rooms) }
         : { status: "error", rooms: current.rooms, error: result.error },
     );
   }, []);
@@ -52,8 +70,12 @@ export function useRoomBrowser(enabled: boolean) {
     void (async () => {
       await refresh();
       if (!supabase) return;
-      await ensureSession();
-      await supabase.realtime.setAuth();
+      try {
+        await supabase.realtime.setAuth();
+      } catch {
+        if (!cancelled) setLive("offline");
+        return;
+      }
       if (cancelled) return;
       channel = supabase
         .channel("rooms", { config: { private: true } })
@@ -62,7 +84,7 @@ export function useRoomBrowser(enabled: boolean) {
           if (room) setState((current) => ({ ...current, rooms: mergeRoom(current.rooms, room) }));
         })
         .subscribe((status) => {
-          setLive(status === "SUBSCRIBED");
+          setLive(status === "SUBSCRIBED" ? "live" : status === "CLOSED" ? "connecting" : "offline");
           // Anything missed while disconnected is picked up by a fresh list.
           if (status === "SUBSCRIBED") void refresh();
         });

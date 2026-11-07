@@ -97,13 +97,10 @@ export function ChessBoard({
       // Only the side to move can begin a drag; taps elsewhere still click through.
       if (piece?.color !== position.turn) return;
 
+      // No pointer capture yet: Chromium sends the click that follows a captured
+      // press to the capturing board instead of the square, which silently broke
+      // click-to-select. Capture starts only once this becomes a drag.
       pressRef.current = { square, x: event.clientX, y: event.clientY };
-      try {
-        event.currentTarget.setPointerCapture(event.pointerId);
-      } catch {
-        // A pointer can already be gone by the time this runs; the gesture still
-        // works from the bubbled events.
-      }
     },
     [interactive, position.pieceAt, position.turn, squareAtPoint],
   );
@@ -120,6 +117,13 @@ export function ChessBoard({
 
       const rect = drag ?? measureBoard(boardRef.current);
       if (!rect) return;
+      if (!drag) {
+        try {
+          event.currentTarget.setPointerCapture(event.pointerId);
+        } catch {
+          // The pointer can already be gone; the drag still works from bubbled events.
+        }
+      }
 
       setDrag({
         from: press.square,

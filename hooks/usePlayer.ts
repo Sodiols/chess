@@ -1,50 +1,85 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useSyncExternalStore } from "react";
 import { api } from "@/lib/multiplayer/client";
 import type { Profile } from "@/lib/multiplayer/types";
-import { isOnlineConfigured } from "@/lib/supabase/config";
+import { useAuth } from "@/lib/auth/session";
 
-export type PlayerState =
-  | { status: "unconfigured" }
+type Entry =
   | { status: "loading" }
   | { status: "error"; error: string }
   | { status: "ready"; profile: Profile };
 
+export type PlayerState =
+  | { status: "unconfigured" }
+  | { status: "signed-out" }
+  | { status: "anonymous" }
+  | Entry;
+
 /**
- * The signed-in guest. Signs in anonymously on first use; the session persists
- * across refreshes and is shared by tabs, so one browser is one player.
+ * One profile cache for the whole tab, keyed by account. When the account
+ * changes, the old entry is discarded before anything reads it, so one
+ * player's profile can never show under another's session.
  */
-export function usePlayer() {
-  const [state, setState] = useState<PlayerState>(
-    isOnlineConfigured ? { status: "loading" } : { status: "unconfigured" },
-  );
-  const [attempt, setAttempt] = useState(0);
+let cache: { userId: string | null; entry: Entry } = { userId: null, entry: { status: "loading" } };
+let inFlight: string | null = null;
+const listeners = new Set<() => void>();
+
+function set(userId: string, entry: Entry) {
+  cache = { userId, entry };
+  for (const listener of listeners) listener();
+}
+
+async function load(userId: string, force: boolean) {
+  if (inFlight === userId) return;
+  if (!force && cache.userId === userId && cache.entry.status === "ready") return;
+  if (cache.userId !== userId || cache.entry.status === "error") set(userId, { status: "loading" });
+  inFlight = userId;
+  const result = await api<{ profile: Profile }>("/api/profile");
+  inFlight = null;
+  if (cache.userId !== userId) return; // signed out or switched meanwhile
+  set(userId, result.ok ? { status: "ready", profile: result.profile } : { status: "error", error: result.error });
+}
+
+const subscribe = (listener: () => void) => {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+};
+
+/**
+ * The signed-in player's profile. `revalidate` refetches on mount (online
+ * lobbies need a fresh `activeGameId`); the navbar uses the cached copy.
+ */
+export function usePlayer({ revalidate = false }: { revalidate?: boolean } = {}) {
+  const auth = useAuth();
+  const userId = auth.status === "signed-in" || auth.status === "anonymous" ? auth.user.id : null;
+  const snapshot = useSyncExternalStore(subscribe, () => cache, () => cache);
 
   useEffect(() => {
-    if (!isOnlineConfigured) return;
-    let cancelled = false;
-    void api<{ profile: Profile }>("/api/profile").then((result) => {
-      if (cancelled) return;
-      setState(result.ok ? { status: "ready", profile: result.profile } : { status: "error", error: result.error });
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [attempt]);
+    if (userId) void load(userId, revalidate);
+  }, [userId, revalidate]);
 
   const retry = useCallback(() => {
-    setState({ status: "loading" });
-    setAttempt((value) => value + 1);
-  }, []);
+    if (userId) void load(userId, true);
+  }, [userId]);
 
   /** Returns an error code, or null on success. */
-  const rename = useCallback(async (nickname: string): Promise<string | null> => {
-    const result = await api<{ profile: Profile }>("/api/profile", { method: "POST", body: { nickname } });
-    if (!result.ok) return result.error;
-    setState({ status: "ready", profile: result.profile });
-    return null;
-  }, []);
+  const setUsername = useCallback(
+    async (username: string): Promise<string | null> => {
+      if (!userId) return "signed_out";
+      const result = await api<{ profile: Profile }>("/api/profile", { method: "POST", body: { username } });
+      if (!result.ok) return result.error;
+      if (cache.userId === userId) set(userId, { status: "ready", profile: result.profile });
+      return null;
+    },
+    [userId],
+  );
 
-  return { state, rename, retry };
+  let state: PlayerState;
+  if (auth.status === "unconfigured" || auth.status === "signed-out") state = { status: auth.status };
+  else if (auth.status === "loading" || !userId) state = { status: "loading" };
+  else if (auth.status === "anonymous") state = { status: "anonymous" };
+  else state = snapshot.userId === userId ? snapshot.entry : { status: "loading" };
+
+  return { state, auth, retry, setUsername };
 }

@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { ensureSession } from "@/lib/multiplayer/client";
 import { getBrowserClient } from "@/lib/supabase/browser";
 
 /**
@@ -21,8 +20,11 @@ export function usePlayerEvents(playerId: string | null, onGameStarted: (gameId:
     let channel: ReturnType<typeof supabase.channel> | null = null;
 
     void (async () => {
-      await ensureSession();
-      await supabase.realtime.setAuth();
+      try {
+        await supabase.realtime.setAuth();
+      } catch {
+        return; // Callers also poll the server, so a missed event only costs a few seconds.
+      }
       if (cancelled) return;
       channel = supabase
         .channel(`player:${playerId}`, { config: { private: true } })

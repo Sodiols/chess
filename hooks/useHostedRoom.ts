@@ -17,15 +17,22 @@ export interface CreateRoomInput {
   discoverable: boolean;
 }
 
+export type HostPhase = "restoring" | "idle" | "creating" | "cancelling";
+
 /**
- * A room this player is hosting. The plaintext password is kept only in memory
- * for this session, so the host can copy the invite; the server stores a hash.
+ * A room this player is hosting. The server is the source of truth: on load
+ * the hook asks it for the player's open room, so a refresh keeps the room.
+ * The plaintext password exists only in this tab's memory from the moment it
+ * was typed; after a refresh it can't be shown again (the server has a hash).
  */
-export function useHostedRoom(playerId: string | null, onStarted: (gameId: string) => void) {
+export function useHostedRoom(playerId: string, onStarted: (gameId: string) => void) {
   const [room, setRoom] = useState<RoomSummary | null>(null);
-  const [password, setPassword] = useState("");
+  /** Null when the room was restored and its password is unknown here. */
+  const [password, setPassword] = useState<string | null>(null);
+  const [phase, setPhase] = useState<HostPhase>("restoring");
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
+  /** The last heartbeat failed to reach the server; the room may lapse. */
+  const [unreachable, setUnreachable] = useState(false);
   const startedRef = useRef(onStarted);
   useEffect(() => {
     startedRef.current = onStarted;
@@ -43,25 +50,64 @@ export function useHostedRoom(playerId: string | null, onStarted: (gameId: strin
   );
   usePlayerEvents(playerId, started);
 
+  /** Applies the server's view of the hosted room. */
+  const settle = useCallback((next: RoomSummary) => {
+    if (next.status === "started" && next.gameId) {
+      setRoom(next);
+      startedRef.current(next.gameId);
+    } else if (next.status === "waiting") {
+      setRoom(next);
+    } else {
+      setRoom(null);
+      setPassword(null);
+      setError(next.status === "expired" ? "room_expired" : null);
+    }
+  }, []);
+
+  // Restore an open room after a refresh or a return to this page.
+  useEffect(() => {
+    let cancelled = false;
+    void api<{ room: RoomSummary | null }>("/api/rooms?mine=1").then((result) => {
+      if (cancelled) return;
+      if (result.ok && result.room) settle(result.room);
+      else if (!result.ok) setError(result.error);
+      setPhase("idle");
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [playerId, settle]);
+
   const create = useCallback(async (input: CreateRoomInput) => {
-    setBusy(true);
+    setPhase("creating");
     setError(null);
     const result = await api<{ room: RoomSummary }>("/api/rooms", { method: "POST", body: input });
-    setBusy(false);
+    setPhase("idle");
     if (!result.ok) {
       setError(result.error);
       return;
     }
     setPassword(input.password);
+    setUnreachable(false);
     setRoom(result.room);
   }, []);
 
+  // The room stays on screen until the server confirms; a failure keeps it
+  // (it is still open) and says so, and Cancel can be pressed again.
   const cancel = useCallback(async () => {
     if (!code) return;
-    setRoom(null);
-    setPassword("");
-    await api(`/api/rooms/${code}`, { method: "DELETE" });
-  }, [code]);
+    setPhase("cancelling");
+    setError(null);
+    const result = await api<{ room: RoomSummary }>(`/api/rooms/${code}`, { method: "DELETE" });
+    setPhase("idle");
+    if (result.ok) settle(result.room);
+    else if (result.error === "room_not_found") {
+      setRoom(null);
+      setPassword(null);
+    } else {
+      setError(result.error);
+    }
+  }, [code, settle]);
 
   // Heartbeat keeps the room listed and catches a missed "game started" event.
   useEffect(() => {
@@ -71,13 +117,30 @@ export function useHostedRoom(playerId: string | null, onStarted: (gameId: strin
         method: "POST",
         body: { action: "heartbeat" },
       });
-      if (!result.ok) return;
-      if (result.room.status === "started" && result.room.gameId) started(result.room.gameId);
-      else if (result.room.status !== "waiting") setRoom(result.room);
+      if (result.ok) {
+        setUnreachable(false);
+        settle(result.room);
+      } else if (result.error === "room_not_found") {
+        setRoom(null);
+        setPassword(null);
+        setError("room_closed");
+      } else {
+        setUnreachable(true);
+      }
     };
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void beat();
+    };
+    void beat();
     const timer = setInterval(() => void beat(), HEARTBEAT_MS);
-    return () => clearInterval(timer);
-  }, [code, started]);
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("online", onVisible);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("online", onVisible);
+    };
+  }, [code, settle]);
 
-  return { room, password, error, busy, create, cancel };
+  return { room, password, phase, error, unreachable, create, cancel };
 }

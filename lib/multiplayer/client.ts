@@ -5,53 +5,34 @@ import { getBrowserClient } from "@/lib/supabase/browser";
 
 export type ApiResult<T> = ({ ok: true } & T) | { ok: false; error: string };
 
-let sessionPromise: Promise<Session | null> | null = null;
+const TIMEOUT_MS = 15_000;
 
 /**
- * Returns the guest session, signing in anonymously the first time. Concurrent
- * callers share one sign-in, so a page that mounts several hooks still creates
- * exactly one identity.
+ * The current session, refreshed if its access token expired. Never signs
+ * anyone in: online play needs a real account, created on /signup.
  */
-export function ensureSession(): Promise<Session | null> {
-  const supabase = getBrowserClient();
-  if (!supabase) return Promise.resolve(null);
-
-  sessionPromise ??= (async () => {
-    const { data } = await supabase.auth.getSession();
-    if (data.session) return data.session;
-    const signIn = await supabase.auth.signInAnonymously();
-    if (signIn.error) throw signIn.error;
-    return signIn.data.session;
-  })().finally(() => {
-    sessionPromise = null;
-  });
-  return sessionPromise;
-}
-
-/** An expired or revoked session: try a refresh, else start a new guest. */
-async function recoverSession(): Promise<Session | null> {
+export async function currentSession(): Promise<Session | null> {
   const supabase = getBrowserClient();
   if (!supabase) return null;
-  const refreshed = await supabase.auth.refreshSession();
-  if (refreshed.data.session) return refreshed.data.session;
-  await supabase.auth.signOut({ scope: "local" });
-  return ensureSession();
+  const { data } = await supabase.auth.getSession();
+  return data.session;
 }
 
-/** Calls a Gambit API route as the current guest. Never throws. */
+/** Calls a Gambit API route as the signed-in player. Never throws. */
 export async function api<T extends object = object>(
   path: string,
   init: { method?: string; body?: unknown } = {},
 ): Promise<ApiResult<T>> {
+  const supabase = getBrowserClient();
+  if (!supabase) return { ok: false, error: "not_configured" };
+
   let session: Session | null;
   try {
-    session = await ensureSession();
-  } catch (error) {
-    // Supabase reports this when anonymous sign-ins are switched off.
-    const code = (error as { code?: string }).code;
-    return { ok: false, error: code === "anonymous_provider_disabled" ? "guest_disabled" : "network" };
+    session = await currentSession();
+  } catch {
+    return { ok: false, error: "network" };
   }
-  if (!session) return { ok: false, error: "not_configured" };
+  if (!session) return { ok: false, error: "signed_out" };
 
   const send = (token: string) =>
     fetch(path, {
@@ -62,18 +43,29 @@ export async function api<T extends object = object>(
       },
       body: init.body === undefined ? undefined : JSON.stringify(init.body),
       cache: "no-store",
+      signal: AbortSignal.timeout(TIMEOUT_MS),
     });
 
   try {
     let response = await send(session.access_token);
     if (response.status === 401) {
-      const recovered = await recoverSession();
-      if (!recovered) return { ok: false, error: "unauthorized" };
-      response = await send(recovered.access_token);
+      // The token was revoked or expired early; one refresh, then give up.
+      // Failing here signs nobody in and creates no account.
+      const { data } = await supabase.auth.refreshSession();
+      if (!data.session) return { ok: false, error: "signed_out" };
+      response = await send(data.session.access_token);
+      if (response.status === 401) return { ok: false, error: "signed_out" };
     }
-    const payload = (await response.json()) as ApiResult<T>;
+    const payload = (await response.json()) as ApiResult<T> & { debug?: string };
+    if (process.env.NODE_ENV === "development" && !payload.ok) {
+      console.warn(`[gambit] ${init.method ?? "GET"} ${path} → ${payload.error}`, {
+        requestId: response.headers.get("x-request-id"),
+        debug: payload.debug,
+      });
+    }
     return payload && typeof payload === "object" ? payload : { ok: false, error: "try_again" };
-  } catch {
-    return { ok: false, error: "network" };
+  } catch (error) {
+    const timedOut = error instanceof DOMException && error.name === "TimeoutError";
+    return { ok: false, error: timedOut ? "timeout" : "network" };
   }
 }

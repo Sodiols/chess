@@ -8,7 +8,7 @@ import { computeMaterial } from "@/lib/chess/material";
 import { resolveSquareClick } from "@/lib/chess/selection";
 import { opposite } from "@/lib/chess/engine";
 import { playSound } from "@/lib/sound";
-import { api, ensureSession } from "@/lib/multiplayer/client";
+import { api } from "@/lib/multiplayer/client";
 import { OnlineGameStore } from "@/lib/multiplayer/onlineGameStore";
 import { errorMessage, rowResult, type GameAction, type GameRow, type GameSnapshot, type MoveRow } from "@/lib/multiplayer/types";
 import { getBrowserClient } from "@/lib/supabase/browser";
@@ -98,8 +98,12 @@ export function useOnlineGame(gameId: string, playerId: string, sound: boolean) 
     void (async () => {
       // First paint comes from HTTP, so the board shows even if Realtime is slow.
       void resync();
-      await ensureSession();
-      await supabase.realtime.setAuth();
+      try {
+        await supabase.realtime.setAuth();
+      } catch {
+        if (!cancelled) setConnection("offline");
+        return;
+      }
       if (cancelled) return;
 
       const subscribed = supabase.channel(`game:${gameId}`, {

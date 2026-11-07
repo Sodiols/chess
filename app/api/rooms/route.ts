@@ -1,8 +1,12 @@
 import { callRpc, readBody, withPlayer } from "@/lib/multiplayer/http";
 import { findOnlineTimeControl } from "@/lib/multiplayer/timeControls";
 
+/** The open-room list, or with `?mine=1` the caller's own waiting room. */
 export function GET(request: Request) {
-  return withPlayer(request, (_userId, admin) => callRpc(admin, "list_open_rooms", {}));
+  const mine = new URL(request.url).searchParams.has("mine");
+  return withPlayer(request, (userId, admin) =>
+    mine ? callRpc(admin, "get_hosted_room", { p_user: userId }) : callRpc(admin, "list_open_rooms", {}),
+  );
 }
 
 export function POST(request: Request) {

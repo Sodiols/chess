@@ -201,7 +201,7 @@ describe("rooms", () => {
 
     expect(await rpc<Result>(db, "join_room", [guest, code, "nope"])).toMatchObject({ error: "wrong_password" });
     expect(await rpc<Result>(db, "join_room", [guest, "ZZZZZZ", "x"])).toMatchObject({ error: "room_not_found" });
-    expect(await rpc<Result>(db, "join_room", [guest, "bad code';--", "x"])).toMatchObject({ error: "room_not_found" });
+    expect(await rpc<Result>(db, "join_room", [guest, "bad code';--", "x"])).toMatchObject({ error: "invalid_room_code" });
     expect(await rpc<Result>(db, "join_room", [host, code, "s3cret-pass"])).toMatchObject({ error: "own_room" });
 
     expect((await rpc<Result>(db, "join_room", [guest, code, "s3cret-pass"])).ok).toBe(true);
@@ -229,7 +229,7 @@ describe("rooms", () => {
 
     const expired = await createRoom(other);
     await db.query("update public.chess_rooms set expires_at = now() - interval '1 second' where code = $1", [expired]);
-    expect(await rpc<Result>(db, "join_room", [guest, expired, "s3cret-pass"])).toMatchObject({ error: "room_closed" });
+    expect(await rpc<Result>(db, "join_room", [guest, expired, "s3cret-pass"])).toMatchObject({ error: "room_expired" });
 
     const listed = await rpc<Result>(db, "list_open_rooms", []);
     const codes = listed.rooms!.map((room) => room.code);

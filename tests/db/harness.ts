@@ -18,7 +18,16 @@ const SUPABASE_SHIM = `
     create role service_role nologin bypassrls;
   exception when duplicate_object then null; end $$;
 
-  create table auth.users (id uuid primary key default gen_random_uuid());
+  create table auth.users (
+    id uuid primary key default gen_random_uuid(),
+    email text,
+    raw_user_meta_data jsonb not null default '{}'::jsonb,
+    created_at timestamptz not null default now()
+  );
+  -- Sign-ups are written by GoTrue's own role, which has no rights on public.
+  do $$ begin create role supabase_auth_admin nologin; exception when duplicate_object then null; end $$;
+  grant usage on schema auth to supabase_auth_admin;
+  grant insert, select on auth.users to supabase_auth_admin;
   create function auth.uid() returns uuid language sql stable as
     $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
 
@@ -51,9 +60,18 @@ export async function createDatabase(): Promise<PGlite> {
   return db;
 }
 
-export async function createUser(db: PGlite): Promise<string> {
-  const { rows } = await db.query<{ id: string }>("insert into auth.users default values returning id");
-  return rows[0]!.id;
+/** Inserts an auth user the way GoTrue does, as `supabase_auth_admin`. */
+export async function createUser(db: PGlite, metadata: Record<string, unknown> = {}): Promise<string> {
+  await db.exec("set role supabase_auth_admin");
+  try {
+    const { rows } = await db.query<{ id: string }>(
+      "insert into auth.users (raw_user_meta_data) values ($1) returning id",
+      [JSON.stringify(metadata)],
+    );
+    return rows[0]!.id;
+  } finally {
+    await db.exec("reset role");
+  }
 }
 
 /** Calls an RPC as the service role, the way the API routes do. */

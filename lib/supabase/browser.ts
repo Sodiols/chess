@@ -7,7 +7,7 @@ let client: SupabaseClient | null = null;
 
 /**
  * One client per tab. Its session lives in localStorage, so a refresh keeps the
- * same guest identity, and all tabs of one browser share it.
+ * same account signed in (and survives browser restarts); all tabs share it.
  */
 export function getBrowserClient(): SupabaseClient | null {
   if (!isOnlineConfigured || typeof window === "undefined") return null;

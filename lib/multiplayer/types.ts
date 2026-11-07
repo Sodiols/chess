@@ -65,8 +65,30 @@ export interface RoomSummary {
 
 export interface Profile {
   id: string;
+  /** Display name stored on new games and rooms; equals `username` once one is set. */
   nickname: string;
+  /** Null only for accounts that still have to choose one. */
+  username: string | null;
   activeGameId: string | null;
+  createdAt: string;
+}
+
+export interface PlayerStats {
+  played: number;
+  wins: number;
+  losses: number;
+  draws: number;
+}
+
+export interface RecentGame {
+  id: string;
+  color: Color;
+  opponentName: string;
+  outcome: "win" | "loss" | "draw";
+  reason: WinReason | DrawReason;
+  initialMs: number;
+  incrementMs: number;
+  endedAt: string;
 }
 
 export type GameAction =
@@ -88,24 +110,45 @@ export const GAME_ACTIONS: readonly GameAction[] = [
   "decline_rematch",
 ];
 
-/** Error codes shared by the database functions and the API routes. */
+/** Error codes shared by the database functions, the API routes and auth forms. */
 const ERROR_MESSAGES: Record<string, string> = {
-  unauthorized: "Your session has expired. Reconnecting…",
+  unauthorized: "Your session has expired. Please log in again.",
+  signed_out: "You're signed out. Log in to play online.",
+  account_required: "Online play needs a Gambit account. Sign up or log in to continue.",
   not_configured: "Online play isn't configured on this server.",
-  guest_disabled:
-    "Guest sign-in is turned off for this Supabase project. Enable anonymous sign-ins under Authentication → Sign In / Providers.",
+  setup_incomplete:
+    "The server's database is missing Gambit's latest migration. The site owner needs to apply supabase/migrations (see SUPABASE.md).",
   rate_limited: "Too many requests. Wait a moment and try again.",
+  timeout: "The server took too long to respond. Try again.",
   invalid_request: "That request wasn't valid.",
   invalid_time_control: "That time control isn't available online.",
-  invalid_nickname: "Nicknames are 2–20 letters, numbers, spaces, dots, dashes or underscores.",
+  invalid_username: "Usernames are 3–20 letters, numbers or underscores, with no spaces.",
+  username_reserved: "That username is reserved. Choose another.",
+  username_taken: "That username is already taken.",
+  invalid_email: "Enter a valid email address.",
+  weak_password: "Use at least 8 characters for your password.",
+  password_required: "Enter your password.",
+  password_updated: "Password updated.",
+  password_mismatch: "The passwords don't match.",
+  invalid_credentials: "Incorrect email or password.",
+  email_not_confirmed: "Confirm your email address first — check your inbox for the link.",
+  email_taken: "An account with this email already exists. Log in instead.",
+  same_password: "Choose a password different from your current one.",
+  reauthentication_needed: "For security, request a password reset email to change your password.",
+  invalid_link: "This link is invalid or has expired. Request a new one.",
+  auth_disabled:
+    "Email sign-ups are turned off for this Supabase project (Authentication → Sign In / Providers → Email).",
+  username_check_failed: "Couldn't check that username right now. You can still try to create the account.",
   invalid_room_name: "Give the room a name of up to 40 characters.",
   invalid_password: "Room passwords are 4–64 characters.",
   invalid_color: "Choose White, Black or Random.",
-  in_game: "You already have a game in progress.",
+  in_game: "You already have a game in progress. Finish or resume it first.",
+  invalid_room_code: "Room IDs are 6 characters, like K7K2QX.",
   room_not_found: "No room exists with that ID.",
   own_room: "That's your own room — share the ID with your opponent.",
   room_full: "Room is full.",
-  room_closed: "That room is no longer open.",
+  room_closed: "That room was closed by its host.",
+  room_expired: "That room has expired.",
   wrong_password: "Invalid room password.",
   host_unavailable: "The host has started another game.",
   try_again: "Something went wrong. Please try again.",

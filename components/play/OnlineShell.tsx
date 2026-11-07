@@ -4,7 +4,7 @@ import { Navbar } from "@/components/Navbar";
 import { OnlineGate } from "@/components/multiplayer/OnlineGate";
 import type { Profile } from "@/lib/multiplayer/types";
 
-/** Page frame for the online lobbies: heading, guest identity, then content. */
+/** Page frame for the online lobbies: heading, signed-in player, then content. */
 export function OnlineShell({
   title,
   description,
