@@ -19,6 +19,7 @@ export const metadata: Metadata = {
   title: "Gambit — Chess, Your Way",
   description:
     "Chess online and offline: random matchmaking, private rooms, a computer opponent and local two-player games.",
+  verification: { google: "iEQ4_JCjqMIA2XScyuNewP0E9x8IZbxG1sdlqgcoWXY" },
 };
 
 export const viewport: Viewport = {

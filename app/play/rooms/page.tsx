@@ -7,7 +7,7 @@ export default function RoomsPage() {
   return (
     <OnlineShell
       title="Private match"
-      description="Create a password-protected room or join another player's match."
+      description="Play a friend with a room ID and a password."
       width="wide"
     >
       {(profile) => <RoomsLobby profile={profile} />}

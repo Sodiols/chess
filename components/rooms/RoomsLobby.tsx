@@ -15,6 +15,7 @@ import { api } from "@/lib/multiplayer/client";
 import { onlinePreferences } from "@/lib/multiplayer/preferences";
 import {
   ONLINE_TIME_CONTROLS,
+  findOnlineTimeControl,
   onlineTimeControlById,
 } from "@/lib/multiplayer/timeControls";
 import {
@@ -30,8 +31,6 @@ import { TextField } from "@/components/ui/TextField";
 import { Toggle } from "@/components/ui/Toggle";
 import { CopyIcon, LockIcon, RefreshIcon } from "@/components/ui/icons";
 import { TimeControlPicker } from "@/components/multiplayer/TimeControlPicker";
-import { ShowcaseBoard } from "@/components/chess/ShowcaseBoard";
-import { OPENINGS } from "@/constants/openings";
 import { ResumeBanner } from "@/components/multiplayer/OnlineGate";
 
 const CODE_PATTERN = /^[A-HJ-NP-Z2-9]{6}$/;
@@ -64,55 +63,70 @@ export function RoomsLobby({ profile }: { profile: Profile }) {
   }
 
   return (
-    <div className="space-y-24">
-      <div className="grid items-start gap-6 lg:grid-cols-[1.25fr_1fr]">
-        <section
-          aria-labelledby="create-heading"
-          className="animate-rise scroll-mt-24 rounded-lg bg-surface p-6 sm:p-8"
-        >
-          <h2 id="create-heading" className="text-2xl font-extrabold">
-            Create a room
-          </h2>
-          <p className="mt-2 text-[0.9375rem] text-muted">
-            Share the room ID and password with your opponent.
-          </p>
-          {hosted.phase === "restoring" ? (
-            <p className="mt-5 text-sm text-muted" role="status">
-              Checking for a room you already host…
-            </p>
-          ) : profile.activeGameId ? (
-            <div className="mt-5">
-              <ResumeBanner gameId={profile.activeGameId} />
-              <p className="text-xs text-faint">
-                You can host a room again once that game has finished.
-              </p>
-            </div>
-          ) : (
-            <CreateRoomForm
-              username={profile.username ?? profile.nickname}
-              busy={hosted.phase === "creating"}
-              error={hosted.error}
-              onCreate={hosted.create}
-            />
-          )}
-        </section>
-
+    // Phones: join, create, then the list. Desktop: join and list left, create right.
+    <div className="flex flex-col gap-12 lg:grid lg:grid-cols-[minmax(0,1fr)_26rem] lg:items-start lg:gap-x-10">
+      <div className="contents lg:flex lg:min-w-0 lg:flex-col lg:gap-12">
         <section
           aria-labelledby="join-heading"
-          className="animate-rise scroll-mt-24 rounded-lg bg-surface p-6 sm:p-8"
-          style={{ animationDelay: "80ms" }}
+          className="animate-rise scroll-mt-24 rounded-lg bg-surface p-6 sm:p-7"
         >
           <h2 id="join-heading" className="text-2xl font-extrabold">
             Join a room
           </h2>
-          <p className="mt-2 text-[0.9375rem] text-muted">
-            Paste the ID you were given.
+          <p className="mt-1.5 text-[0.9375rem] text-muted">
+            Got a room ID from a friend? Enter it with the password.
           </p>
-          <JoinRoomForm initialCode="" onJoined={goToGame} />
+          <JoinRoomForm initialCode="" onJoined={goToGame} inline />
         </section>
+
+        <RoomBrowser onJoin={setJoinCode} />
       </div>
 
-      <RoomBrowser onJoin={setJoinCode} />
+      <section
+        aria-labelledby="create-heading"
+        className="animate-rise scroll-mt-24 rounded-lg bg-surface p-6 max-lg:order-2 sm:p-7"
+        style={{ animationDelay: "80ms" }}
+      >
+        <h2 id="create-heading" className="text-2xl font-extrabold">
+          Create a room
+        </h2>
+        <ol className="mt-4 grid gap-2.5 text-[0.9375rem] text-muted">
+          {[
+            "Set a password and a time",
+            "Send your friend the room ID and password",
+            "The game starts when they join",
+          ].map((step, index) => (
+            <li key={step} className="flex items-center gap-3">
+              <span
+                aria-hidden
+                className="flex size-6 shrink-0 items-center justify-center rounded-full bg-raised text-xs font-bold text-ink"
+              >
+                {index + 1}
+              </span>
+              {step}
+            </li>
+          ))}
+        </ol>
+        {hosted.phase === "restoring" ? (
+          <p className="mt-6 text-sm text-muted" role="status">
+            Checking for a room you already host…
+          </p>
+        ) : profile.activeGameId ? (
+          <div className="mt-6">
+            <ResumeBanner gameId={profile.activeGameId} />
+            <p className="text-sm text-faint">
+              You can host a room again once that game has finished.
+            </p>
+          </div>
+        ) : (
+          <CreateRoomForm
+            username={profile.username ?? profile.nickname}
+            busy={hosted.phase === "creating"}
+            error={hosted.error}
+            onCreate={hosted.create}
+          />
+        )}
+      </section>
 
       <Dialog
         open={joinCode !== null}
@@ -175,47 +189,38 @@ function CreateRoomForm({
 
   return (
     <form onSubmit={submit} noValidate className="mt-7 space-y-6">
-      <div className="grid gap-3 sm:grid-cols-2">
-        <TextField
-          label="Room name"
-          value={name}
-          placeholder={`${username}'s room`}
-          maxLength={40}
-          onChange={setName}
+      <div>
+        <label
+          htmlFor={passwordId}
+          className="mb-2 block text-sm font-semibold"
+        >
+          Password
+        </label>
+        <input
+          id={passwordId}
+          type="password"
+          maxLength={64}
+          autoComplete="new-password"
+          value={password}
+          aria-invalid={passwordError ? true : undefined}
+          aria-describedby={`${passwordId}-hint`}
+          onChange={(event) => setPassword(event.target.value)}
+          className={clsx(
+            "h-12 w-full rounded-md border bg-canvas px-3.5 text-[0.9375rem] hover:border-line-strong focus:border-accent focus:outline-none",
+            passwordError ? "border-[#8a3d33]" : "border-line",
+          )}
         />
-        <div>
-          <label
-            htmlFor={passwordId}
-            className="mb-2 block text-sm font-semibold"
-          >
-            Password
-          </label>
-          <input
-            id={passwordId}
-            type="password"
-            maxLength={64}
-            autoComplete="new-password"
-            value={password}
-            aria-invalid={passwordError ? true : undefined}
-            aria-describedby={`${passwordId}-hint`}
-            onChange={(event) => setPassword(event.target.value)}
-            className={clsx(
-              "h-12 w-full rounded-md border bg-canvas px-3.5 text-[0.9375rem] hover:border-line-strong focus:border-accent focus:outline-none",
-              passwordError ? "border-[#8a3d33]" : "border-line",
-            )}
-          />
-          <p
-            id={`${passwordId}-hint`}
-            className={clsx(
-              "mt-2 text-[0.8125rem]",
-              passwordError ? "text-[#f4aaa1]" : "text-faint",
-            )}
-          >
-            {passwordError
-              ? errorMessage(passwordError)
-              : "4–64 characters. Share it with your opponent."}
-          </p>
-        </div>
+        <p
+          id={`${passwordId}-hint`}
+          className={clsx(
+            "mt-2 text-[0.8125rem]",
+            passwordError ? "text-[#f4aaa1]" : "text-faint",
+          )}
+        >
+          {passwordError
+            ? errorMessage(passwordError)
+            : "Your friend needs it to join. 4–64 characters."}
+        </p>
       </div>
 
       <TimeControlPicker
@@ -223,24 +228,62 @@ function CreateRoomForm({
         onChange={(timeControl) => onlinePreferences.update({ timeControl })}
       />
 
-      <OptionGroup<"w" | "b" | "random">
-        legend="You play"
-        columns={3}
-        value={color}
-        onChange={setColor}
-        options={[
-          { value: "w", label: "White" },
-          { value: "b", label: "Black" },
-          { value: "random", label: "Random" },
-        ]}
-      />
-
-      <Toggle
-        checked={discoverable}
-        onChange={setDiscoverable}
-        label="List in the room browser"
-        hint="Anyone can see it, but joining always needs the password."
-      />
+      <details className="group rounded-md bg-raised">
+        <summary className="flex min-h-12 cursor-pointer list-none items-center gap-3 px-4 py-2.5 select-none [&::-webkit-details-marker]:hidden">
+          <span className="min-w-0 flex-1">
+            <span className="block text-sm font-semibold">More options</span>
+            <span className="block truncate text-[0.8125rem] text-muted">
+              {color === "random"
+                ? "Random colour"
+                : color === "w"
+                  ? "You play White"
+                  : "You play Black"}{" "}
+              ·{" "}
+              {discoverable ? "Listed in open rooms" : "Hidden from open rooms"}
+            </span>
+          </span>
+          <svg
+            aria-hidden
+            viewBox="0 0 16 16"
+            className="size-4 shrink-0 text-muted transition-transform group-open:rotate-180"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.75"
+          >
+            <path
+              d="m4 6 4 4 4-4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </summary>
+        <div className="space-y-5 px-4 pt-2 pb-4">
+          <TextField
+            label="Room name"
+            value={name}
+            placeholder={`${username}'s room`}
+            maxLength={40}
+            onChange={setName}
+          />
+          <OptionGroup<"w" | "b" | "random">
+            legend="You play"
+            columns={3}
+            value={color}
+            onChange={setColor}
+            options={[
+              { value: "w", label: "White" },
+              { value: "b", label: "Black" },
+              { value: "random", label: "Random" },
+            ]}
+          />
+          <Toggle
+            checked={discoverable}
+            onChange={setDiscoverable}
+            label="List in open rooms"
+            hint="Anyone can see it, but joining always needs the password."
+          />
+        </div>
+      </details>
 
       {error && (
         <p role="alert" className="text-sm text-[#f4aaa1]">
@@ -266,10 +309,13 @@ function JoinRoomForm({
   initialCode,
   onJoined,
   autoFocusPassword = false,
+  inline = false,
 }: {
   initialCode: string;
   onJoined: (gameId: string) => void;
   autoFocusPassword?: boolean;
+  /** One row (ID, password, button) instead of a stacked form. */
+  inline?: boolean;
 }) {
   const [code, setCode] = useState(initialCode);
   const [password, setPassword] = useState("");
@@ -302,7 +348,16 @@ function JoinRoomForm({
   };
 
   return (
-    <form onSubmit={submit} noValidate className="mt-7 space-y-5">
+    <form
+      onSubmit={submit}
+      noValidate
+      className={clsx(
+        "mt-6",
+        inline
+          ? "grid gap-4 sm:grid-cols-[11rem_minmax(0,1fr)_auto] sm:items-end sm:gap-3"
+          : "space-y-5",
+      )}
+    >
       <div>
         <label htmlFor={codeId} className="mb-2 block text-sm font-semibold">
           Room ID
@@ -316,7 +371,7 @@ function JoinRoomForm({
           autoComplete="off"
           autoCapitalize="characters"
           spellCheck={false}
-          className="numeric h-12 w-full rounded-md border border-line bg-canvas px-3.5 text-lg tracking-[0.3em] uppercase hover:border-line-strong focus:border-accent focus:outline-none"
+          className="h-12 w-full rounded-md border border-line bg-canvas px-3.5 text-lg font-semibold tracking-[0.2em] uppercase tabular-nums placeholder:font-normal placeholder:text-faint hover:border-line-strong focus:border-accent focus:outline-none"
         />
       </div>
       <div>
@@ -336,7 +391,7 @@ function JoinRoomForm({
           className="h-12 w-full rounded-md border border-line bg-canvas px-3.5 text-[0.9375rem] hover:border-line-strong focus:border-accent focus:outline-none"
         />
       </div>
-      {error && (
+      {error && !inline && (
         <p role="alert" className="text-sm text-[#f4aaa1]">
           {errorMessage(error)}
         </p>
@@ -345,12 +400,17 @@ function JoinRoomForm({
         type="submit"
         variant="primary"
         size="lg"
-        block
+        block={!inline}
         disabled={busy}
         aria-busy={busy}
       >
         {busy ? "Joining…" : "Join room"}
       </Button>
+      {error && inline && (
+        <p role="alert" className="text-sm text-[#f4aaa1] sm:col-span-3">
+          {errorMessage(error)}
+        </p>
+      )}
     </form>
   );
 }
@@ -400,106 +460,125 @@ function HostedRoom({
         : "Black";
 
   return (
-    <div
-      className="grid items-center gap-12 lg:grid-cols-[minmax(0,34rem)_minmax(0,1fr)] lg:gap-16"
-      aria-live="polite"
-    >
-      <div className="animate-rise">
-        <p className="flex items-center gap-2.5 text-[0.9375rem] text-muted">
+    <div className="max-w-[44rem] animate-rise" aria-live="polite">
+      <div className="overflow-hidden rounded-lg bg-surface">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 bg-accent-soft px-6 py-4 sm:px-8">
           <span
             aria-hidden
             className="size-2.5 animate-pulse rounded-full bg-accent"
           />
-          {room.status === "started"
-            ? "Opponent joined. Starting game…"
-            : "Waiting for player to join…"}
-        </p>
-        <h2 className="mt-3 text-[2rem] leading-tight font-extrabold">
-          {room.name}
-        </h2>
+          <p className="font-semibold">
+            {room.status === "started"
+              ? "Opponent joined. Starting game…"
+              : "Waiting for player to join…"}
+          </p>
+          <p className="w-full truncate pl-[1.375rem] text-[0.9375rem] text-muted sm:ml-auto sm:w-auto sm:pl-0">
+            {room.name}
+          </p>
+        </div>
 
-        <div className="mt-8 overflow-hidden rounded-lg bg-surface">
-          <div className="px-6 pt-6 pb-7">
-            <p className="text-sm text-muted">Room ID</p>
-            <p
-              translate="no"
-              className="numeric mt-1 text-[clamp(2.5rem,6vw,3.75rem)] leading-none font-semibold tracking-[0.18em] text-accent"
-            >
-              {room.code}
-            </p>
-          </div>
-          <dl className="grid grid-cols-3 gap-px bg-line text-[0.9375rem]">
-            <div className="bg-raised px-6 py-4">
-              <dt className="text-sm text-muted">Host</dt>
-              <dd className="mt-1 truncate font-semibold">{room.hostName}</dd>
-            </div>
-            <div className="bg-raised px-6 py-4">
-              <dt className="text-sm text-muted">Time</dt>
-              <dd className="mt-1 font-semibold tabular-nums">
-                {formatTimeControl(room.initialMs, room.incrementMs)}
+        <div className="px-6 pt-7 pb-8 sm:px-8">
+          <h2 className="text-2xl font-extrabold">Send these to your friend</h2>
+          <dl className="mt-6 grid gap-6 sm:grid-cols-2">
+            <div>
+              <dt className="text-sm text-muted">Room ID</dt>
+              <dd>
+                <p
+                  translate="no"
+                  className="numeric mt-1.5 text-[clamp(2.25rem,6vw,3.25rem)] leading-none font-semibold tracking-[0.14em] text-accent"
+                >
+                  {room.code}
+                </p>
               </dd>
             </div>
-            <div className="bg-raised px-6 py-4">
-              <dt className="text-sm text-muted">You play</dt>
-              <dd className="mt-1 font-semibold">{colorLabel}</dd>
+            <div>
+              <dt className="text-sm text-muted">Password</dt>
+              <dd className="mt-1.5">
+                {password ? (
+                  <span className="block text-[1.75rem] leading-tight font-semibold break-all">
+                    {password}
+                  </span>
+                ) : (
+                  <span className="block text-[0.9375rem] leading-snug text-muted">
+                    The one you chose. It isn&rsquo;t shown again after a
+                    refresh.
+                  </span>
+                )}
+              </dd>
             </div>
           </dl>
-        </div>
 
-        <div className="mt-6 grid gap-2 sm:grid-cols-2">
-          <Button size="lg" onClick={() => void copy("id")}>
-            <CopyIcon />
-            {copied === "id" ? "Copied" : "Copy room ID"}
-          </Button>
-          <Button size="lg" onClick={() => void copy("invite")}>
-            <CopyIcon />
-            {copied === "invite" ? "Copied" : "Copy invite details"}
-          </Button>
-        </div>
-        <p className="mt-4 text-sm leading-relaxed text-faint">
-          {password
-            ? "The invite includes the password you just set. Gambit stores only a hash of it."
-            : "Gambit stores only a hash of the room password, so it can't be shown again after a refresh. Share the password you chose when creating the room."}
-        </p>
-
-        {unreachable && room.status === "waiting" && (
-          <p role="status" className="mt-4 text-sm text-[#f4aaa1]">
-            Can&rsquo;t reach the server. Retrying — the room stays open for two
-            minutes without a connection.
-          </p>
-        )}
-        {error && (
-          <p role="alert" className="mt-4 text-sm text-[#f4aaa1]">
-            {errorMessage(error)}
-          </p>
-        )}
-        {room.status === "waiting" && (
-          <div className="mt-6">
+          <div className="mt-8 grid gap-2 sm:grid-cols-2">
             <Button
-              variant="ghost"
-              onClick={onCancel}
-              disabled={cancelling}
-              aria-busy={cancelling}
+              variant="primary"
+              size="lg"
+              onClick={() => void copy("invite")}
             >
-              {cancelling
-                ? "Cancelling…"
-                : error
-                  ? "Try cancelling again"
-                  : "Cancel room"}
+              <CopyIcon />
+              {copied === "invite"
+                ? "Copied"
+                : password
+                  ? "Copy ID and password"
+                  : "Copy invite"}
+            </Button>
+            <Button size="lg" onClick={() => void copy("id")}>
+              <CopyIcon />
+              {copied === "id" ? "Copied" : "Copy room ID"}
             </Button>
           </div>
-        )}
+          <p className="mt-4 text-sm leading-relaxed text-muted">
+            Your friend opens Private match, enters the ID and password, and the
+            game starts for you both.
+          </p>
+        </div>
+
+        <dl className="grid grid-cols-3 gap-px bg-line text-[0.9375rem]">
+          <div className="bg-raised px-6 py-4 sm:px-8">
+            <dt className="text-sm text-muted">Time</dt>
+            <dd className="mt-1 font-semibold tabular-nums">
+              {formatTimeControl(room.initialMs, room.incrementMs)}
+            </dd>
+          </div>
+          <div className="bg-raised px-6 py-4 sm:px-8">
+            <dt className="text-sm text-muted">You play</dt>
+            <dd className="mt-1 font-semibold">{colorLabel}</dd>
+          </div>
+          <div className="bg-raised px-6 py-4 sm:px-8">
+            <dt className="text-sm text-muted">Visible</dt>
+            <dd className="mt-1 font-semibold">
+              {room.discoverable ? "Open rooms" : "Invite only"}
+            </dd>
+          </div>
+        </dl>
       </div>
 
-      <div className="hidden lg:block">
-        <ShowcaseBoard
-          opening={OPENINGS.london}
-          orientation={room.hostColor === "b" ? "b" : "w"}
-          sweeping={room.status === "waiting"}
-          caption={false}
-          className="mx-auto max-w-[38rem]"
-        />
-      </div>
+      {unreachable && room.status === "waiting" && (
+        <p role="status" className="mt-4 text-sm text-[#f4aaa1]">
+          Can&rsquo;t reach the server. Retrying — the room stays open for two
+          minutes without a connection.
+        </p>
+      )}
+      {error && (
+        <p role="alert" className="mt-4 text-sm text-[#f4aaa1]">
+          {errorMessage(error)}
+        </p>
+      )}
+      {room.status === "waiting" && (
+        <div className="mt-5">
+          <Button
+            variant="ghost"
+            onClick={onCancel}
+            disabled={cancelling}
+            aria-busy={cancelling}
+          >
+            {cancelling
+              ? "Cancelling…"
+              : error
+                ? "Try cancelling again"
+                : "Cancel room"}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }
@@ -529,16 +608,16 @@ function RoomBrowser({ onJoin }: { onJoin: (code: string) => void }) {
   }, [query, rooms, timeFilter]);
 
   return (
-    <section aria-labelledby="browser-heading">
+    <section
+      aria-labelledby="browser-heading"
+      className="min-w-0 max-lg:order-3"
+    >
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2
-            id="browser-heading"
-            className="text-[2rem] leading-tight font-extrabold"
-          >
+          <h2 id="browser-heading" className="text-2xl font-extrabold">
             Open rooms
           </h2>
-          <p className="mt-2 flex items-center gap-2 text-[0.9375rem] text-muted">
+          <p className="mt-1.5 flex items-center gap-2 text-[0.9375rem] text-muted">
             <span
               aria-hidden
               className={clsx(
@@ -568,7 +647,7 @@ function RoomBrowser({ onJoin }: { onJoin: (code: string) => void }) {
         </Button>
       </div>
 
-      <div className="mt-6 flex flex-wrap gap-2">
+      <div className="mt-5 flex flex-wrap gap-2">
         <label htmlFor={searchId} className="sr-only">
           Search by room ID
         </label>
@@ -604,7 +683,7 @@ function RoomBrowser({ onJoin }: { onJoin: (code: string) => void }) {
       )}
 
       {visible.length === 0 ? (
-        <div className="mt-6 rounded-lg border border-dashed border-line-strong px-6 py-12 text-center">
+        <div className="mt-4 rounded-lg border border-dashed border-line-strong px-6 py-12 text-center">
           <p className="text-base font-semibold">
             {status === "loading" && rooms.length === 0
               ? "Loading rooms…"
@@ -614,12 +693,12 @@ function RoomBrowser({ onJoin }: { onJoin: (code: string) => void }) {
           </p>
           {status !== "loading" && rooms.length === 0 && (
             <p className="mt-1.5 text-sm text-muted">
-              Create one above — it appears here for everyone instantly.
+              Create one and it shows up here for everyone straight away.
             </p>
           )}
         </div>
       ) : (
-        <ul className="mt-6 grid gap-1.5">
+        <ul className="mt-4 grid gap-1.5">
           {visible.map((room) => (
             <li key={room.code}>
               <RoomCard room={room} onJoin={() => onJoin(room.code)} />
@@ -633,31 +712,46 @@ function RoomBrowser({ onJoin }: { onJoin: (code: string) => void }) {
 
 function RoomCard({ room, onJoin }: { room: RoomSummary; onJoin: () => void }) {
   const time = formatTimeControl(room.initialMs, room.incrementMs);
+  const speed = findOnlineTimeControl(room.initialMs, room.incrementMs)?.group;
+  // The guest gets whichever side the host left.
+  const yourSide =
+    room.hostColor === "random"
+      ? "Random side"
+      : room.hostColor === "w"
+        ? "You play Black"
+        : "You play White";
   return (
-    <article className="grid animate-rise grid-cols-[minmax(0,1fr)_auto] items-center gap-x-6 gap-y-2 rounded-lg bg-surface px-5 py-4 transition-colors hover:bg-raised sm:grid-cols-[minmax(0,1fr)_7rem_6rem_3rem_auto]">
-      <div className="min-w-0">
+    <article className="flex animate-rise flex-wrap items-center gap-x-4 gap-y-3 rounded-lg bg-surface px-4 py-3.5 transition-colors hover:bg-raised sm:px-5">
+      <span
+        aria-hidden
+        className="flex size-10 shrink-0 items-center justify-center rounded-full bg-canvas text-base font-bold text-muted uppercase"
+      >
+        {room.hostName.slice(0, 1)}
+      </span>
+      <div className="min-w-0 flex-1">
         <h3 className="flex items-center gap-2 font-bold">
           <span className="truncate">{room.name}</span>
           <LockIcon className="size-3.5 shrink-0 text-faint" />
+          <span className="sr-only">(password protected)</span>
         </h3>
         <p className="mt-0.5 truncate text-sm text-muted">
-          Hosted by {room.hostName}
+          {room.hostName} ·{" "}
+          <span translate="no" className="tracking-wider tabular-nums">
+            {room.code}
+          </span>
         </p>
       </div>
-      <dl className="contents text-[0.9375rem]">
-        <div className="hidden sm:block">
-          <dt className="sr-only">Room ID</dt>
-          <dd translate="no" className="numeric tracking-wider text-ink">
-            {room.code}
+      <dl className="flex flex-wrap gap-1.5 text-sm max-sm:order-last max-sm:basis-full max-sm:pl-14">
+        <div className="rounded-md bg-canvas px-2.5 py-1">
+          <dt className="sr-only">Time control</dt>
+          <dd className="tabular-nums">
+            {speed && <span className="text-muted">{speed} </span>}
+            {time}
           </dd>
         </div>
-        <div className="hidden text-right sm:block">
-          <dt className="sr-only">Time control</dt>
-          <dd className="text-muted tabular-nums">{time}</dd>
-        </div>
-        <div className="hidden text-right sm:block">
-          <dt className="sr-only">Players</dt>
-          <dd className="text-muted tabular-nums">{room.players}/2</dd>
+        <div className="rounded-md bg-canvas px-2.5 py-1">
+          <dt className="sr-only">Your side</dt>
+          <dd>{yourSide}</dd>
         </div>
       </dl>
       <Button
@@ -668,12 +762,6 @@ function RoomCard({ room, onJoin }: { room: RoomSummary; onJoin: () => void }) {
       >
         Join
       </Button>
-      <p className="col-span-2 text-sm text-muted sm:hidden">
-        <span translate="no" className="numeric text-ink">
-          {room.code}
-        </span>{" "}
-        · {time} · {room.players}/2
-      </p>
     </article>
   );
 }
