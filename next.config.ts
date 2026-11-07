@@ -2,6 +2,10 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  // Browsers and crawlers that skip <link rel="icon"> still ask for /favicon.ico; serve the knight there too.
+  async rewrites() {
+    return [{ source: "/favicon.ico", destination: "/icon" }];
+  },
   // Vercel already redirects http → https; HSTS makes browsers skip the http hop entirely.
   async headers() {
     return [

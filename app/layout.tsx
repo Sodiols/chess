@@ -26,7 +26,7 @@ export const metadata: Metadata = {
   description: HOME_DESCRIPTION,
   applicationName: SITE_NAME,
   keywords: ["chess", "play chess online", "chess vs computer", "free chess", "chess with friends", "learn chess"],
-  alternates: { canonical: "/" },
+  // No canonical here: children inherit it, and every page without its own would point at "/".
   openGraph: { type: "website", siteName: SITE_NAME, locale: "en_US", title: HOME_TITLE, description: HOME_DESCRIPTION, url: "/" },
   twitter: { card: "summary_large_image", title: HOME_TITLE, description: HOME_DESCRIPTION },
   verification: { google: "iEQ4_JCjqMIA2XScyuNewP0E9x8IZbxG1sdlqgcoWXY" },

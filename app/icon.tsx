@@ -1,7 +1,8 @@
 import { ImageResponse } from "next/og";
 import { PIECE_GEOMETRY, PIECE_VIEWBOX } from "@/lib/pieces";
 
-export const size = { width: 64, height: 64 };
+// Google Search ignores favicons that aren't a multiple of 48px square.
+export const size = { width: 96, height: 96 };
 export const contentType = "image/png";
 
 /** The wordmark's knight on the site background; also reused as the Apple touch icon. */
@@ -31,5 +32,5 @@ export function knightIcon(px: number, radius: number) {
 }
 
 export default function Icon() {
-  return knightIcon(size.width, 14);
+  return knightIcon(size.width, 21);
 }

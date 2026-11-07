@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
 import { Navbar } from "@/components/Navbar";
@@ -6,16 +7,24 @@ import { HeroBoard } from "@/components/chess/HeroBoard";
 import { ModeCards } from "@/components/play/ModeCards";
 import { Footer } from "@/components/Footer";
 
+export const metadata: Metadata = { alternates: { canonical: "/" } };
+
 const STRUCTURED_DATA = {
   "@context": "https://schema.org",
-  "@type": "WebApplication",
-  name: SITE_NAME,
-  url: SITE_URL,
-  applicationCategory: "GameApplication",
-  operatingSystem: "Any (web browser)",
-  description:
-    "Free chess in the browser: online matchmaking, private rooms, a computer opponent and two-player games on one device.",
-  offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+  "@graph": [
+    // Google reads the site name in search results from WebSite on the homepage.
+    { "@type": "WebSite", "@id": `${SITE_URL}/#website`, name: SITE_NAME, alternateName: `${SITE_NAME} Chess`, url: SITE_URL },
+    {
+      "@type": "WebApplication",
+      name: SITE_NAME,
+      url: SITE_URL,
+      applicationCategory: "GameApplication",
+      operatingSystem: "Any (web browser)",
+      description:
+        "Free chess in the browser: online matchmaking, private rooms, a computer opponent and two-player games on one device.",
+      offers: { "@type": "Offer", price: "0", priceCurrency: "USD" },
+    },
+  ],
 };
 
 export default function HomePage() {
