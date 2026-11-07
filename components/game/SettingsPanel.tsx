@@ -5,6 +5,7 @@ import { BOARD_THEMES, PIECE_STYLES } from "@/constants/board";
 import { OptionGroup } from "@/components/ui/OptionGroup";
 import { Toggle } from "@/components/ui/Toggle";
 import { ChessPiece } from "@/components/chess/ChessPiece";
+import { SecretModeSettings } from "./SecretModeSettings";
 
 interface SettingsPanelProps {
   settings: GameSettings;
@@ -105,6 +106,8 @@ export function SettingsPanel({ settings, onChange, context = "game" }: Settings
           />
         )}
       </div>
+
+      <SecretModeSettings />
     </div>
   );
 }

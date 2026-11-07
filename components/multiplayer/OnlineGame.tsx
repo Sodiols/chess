@@ -6,6 +6,7 @@ import clsx from "clsx";
 import type { Color } from "@/types";
 import { ASSISTANCE } from "@/constants/assistance";
 import { useGameSettings } from "@/hooks/useGameSettings";
+import { useSecretCoach } from "@/hooks/useSecretCoach";
 import { useOnlineGame, type Connection } from "@/hooks/useOnlineGame";
 import { opposite } from "@/lib/chess/engine";
 import { formatTimeControl } from "@/lib/chess/format";
@@ -15,6 +16,7 @@ import { Button } from "@/components/ui/Button";
 import { ConfirmationDialog } from "@/components/ui/ConfirmationDialog";
 import { Dialog } from "@/components/ui/Dialog";
 import { FlagIcon, GearIcon, HandshakeIcon } from "@/components/ui/icons";
+import { EngineCoach, EvalBar } from "@/components/game/EngineCoach";
 import { GameControls } from "@/components/game/GameControls";
 import { GameLayout } from "@/components/game/GameLayout";
 import { GameResultDialog } from "@/components/game/GameResultDialog";
@@ -38,6 +40,9 @@ export function OnlineGame({ gameId, playerId }: { gameId: string; playerId: str
   const [resultDismissed, setResultDismissed] = useState(false);
 
   const { game, position, myColor, result, opponentId } = online;
+  // Owner-only analysis of the confirmed position. It never leaves this browser:
+  // nothing here is sent to the API, Realtime or the opponent.
+  const secret = useSecretCoach(position, result !== null, online.awaitingServer);
 
   // Both players are sent to the rematch once the server has created it.
   const rematchId = game?.rematch_game_id ?? null;
@@ -92,20 +97,28 @@ export function OnlineGame({ gameId, playerId }: { gameId: string; playerId: str
         top={panel(opposite(bottomColor))}
         bottom={panel(bottomColor)}
         board={
-          <ChessBoard
-            position={position}
-            selected={online.selected}
-            selectedMoves={online.selectedMoves}
-            pins={NO_PINS}
-            rejection={online.rejection}
-            orientation={online.orientation}
-            settings={settings}
-            assistance={ONLINE_ASSISTANCE}
-            interactive={online.isInteractive}
-            onSelect={online.selectSquare}
-            onMove={online.attemptMove}
-            onClearSelection={online.clearSelection}
-          />
+          <div className="flex gap-1.5 sm:gap-2">
+            {secret.showEvalBar && (
+              <EvalBar line={secret.evalLine} turn={secret.shown.turn} orientation={online.orientation} />
+            )}
+            <div className="min-w-0 flex-1">
+              <ChessBoard
+                position={secret.shown}
+                selected={secret.reviewing ? null : online.selected}
+                selectedMoves={secret.reviewing ? [] : online.selectedMoves}
+                pins={NO_PINS}
+                rejection={online.rejection}
+                orientation={online.orientation}
+                settings={settings}
+                assistance={ONLINE_ASSISTANCE}
+                interactive={online.isInteractive && !secret.reviewing}
+                onSelect={online.selectSquare}
+                onMove={online.attemptMove}
+                onClearSelection={online.clearSelection}
+                overlay={secret.overlay}
+              />
+            </div>
+          </div>
         }
         status={
           <div className="space-y-1.5">
@@ -132,6 +145,7 @@ export function OnlineGame({ gameId, playerId }: { gameId: string; playerId: str
         controls={renderControls}
         history={position.history}
         showMoveHistory={settings.showMoveHistory}
+        coach={secret.coach && <EngineCoach {...secret.coach} />}
       />
 
       {online.pendingPromotion && (

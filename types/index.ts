@@ -78,6 +78,8 @@ export interface GameConfig {
   timeControl: TimeControl | null;
   /** Present when one side is played by the computer. */
   bot?: BotConfig;
+  /** The owner's free analysis board: both sides, no clock. */
+  analysis?: boolean;
 }
 
 export type BoardThemeId = "walnut" | "slate" | "sage" | "ivory";

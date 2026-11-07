@@ -6,6 +6,7 @@ import { useChessGame } from "@/hooks/useChessGame";
 import { useComputerOpponent } from "@/hooks/useComputerOpponent";
 import { BOT_DIFFICULTIES } from "@/lib/computer/difficulty";
 import { useGameSettings } from "@/hooks/useGameSettings";
+import { useSecretCoach } from "@/hooks/useSecretCoach";
 import { opposite } from "@/lib/chess/engine";
 import { colorName, formatTimeControl } from "@/lib/chess/format";
 import { MODE_DETAILS } from "@/constants/assistance";
@@ -14,6 +15,7 @@ import { Button } from "@/components/ui/Button";
 import { ConfirmationDialog } from "@/components/ui/ConfirmationDialog";
 import { Dialog } from "@/components/ui/Dialog";
 import { PauseIcon } from "@/components/ui/icons";
+import { EngineCoach, EvalBar } from "./EngineCoach";
 import { GameControls } from "./GameControls";
 import { GameMenu } from "./GameMenu";
 import { GameResultDialog } from "./GameResultDialog";
@@ -51,6 +53,8 @@ export function ChessGame({
 
   const { position, result, clock, paused } = game;
   const turnName = config.players[position.turn];
+  // Owner-only engine analysis, local to this browser. A finished game can be stepped through.
+  const secret = useSecretCoach(position, result !== null || config.analysis === true);
 
   const thinking = useComputerOpponent(config.bot, {
     fen: position.fen,
@@ -117,31 +121,35 @@ export function ChessGame({
   );
 
   const board = (
-    <div className="relative">
-      <ChessBoard
-        position={position}
-        selected={game.selected}
-        selectedMoves={game.selectedMoves}
-        pins={game.pins}
-        rejection={game.rejection}
-        orientation={game.orientation}
-        settings={settings}
-        assistance={game.assistance}
-        interactive={game.isInteractive}
-        onSelect={game.selectSquare}
-        onMove={game.attemptMove}
-        onClearSelection={game.clearSelection}
-      />
+    <div className="relative flex gap-1.5 sm:gap-2">
+      {secret.showEvalBar && <EvalBar line={secret.evalLine} turn={secret.shown.turn} orientation={game.orientation} />}
+      <div className="relative min-w-0 flex-1">
+        <ChessBoard
+          position={secret.shown}
+          selected={secret.reviewing ? null : game.selected}
+          selectedMoves={secret.reviewing ? [] : game.selectedMoves}
+          pins={game.pins}
+          rejection={game.rejection}
+          orientation={game.orientation}
+          settings={settings}
+          assistance={game.assistance}
+          interactive={game.isInteractive && !secret.reviewing}
+          onSelect={game.selectSquare}
+          onMove={game.attemptMove}
+          onClearSelection={game.clearSelection}
+          overlay={secret.overlay}
+        />
 
-      {paused && !result && overlay === "none" && (
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-md bg-canvas/80 backdrop-blur-[2px]">
-          <PauseIcon className="size-7 text-accent" />
-          <p className="text-sm font-medium">Clocks paused</p>
-          <Button size="sm" variant="primary" onClick={game.togglePause}>
-            Resume game
-          </Button>
-        </div>
-      )}
+        {paused && !result && overlay === "none" && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-md bg-canvas/80 backdrop-blur-[2px]">
+            <PauseIcon className="size-7 text-accent" />
+            <p className="text-sm font-medium">Clocks paused</p>
+            <Button size="sm" variant="primary" onClick={game.togglePause}>
+              Resume game
+            </Button>
+          </div>
+        )}
+      </div>
     </div>
   );
 
@@ -149,7 +157,9 @@ export function ChessGame({
     <>
       <GameLayout
         title={
-          config.bot
+          config.analysis
+            ? "Analysis board"
+            : config.bot
             ? `Computer · ${BOT_DIFFICULTIES[config.bot.difficulty].name}`
             : MODE_DETAILS[config.mode].name
         }
@@ -175,6 +185,7 @@ export function ChessGame({
         controls={renderControls}
         history={position.history}
         showMoveHistory={settings.showMoveHistory}
+        coach={secret.coach && <EngineCoach {...secret.coach} />}
       />
 
       {game.pendingPromotion && (

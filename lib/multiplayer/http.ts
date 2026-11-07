@@ -15,6 +15,7 @@ const STATUS: Record<string, number> = {
   room_not_found: 404,
   not_participant: 403,
   wrong_password: 403,
+  not_owner: 403,
 };
 
 const DEV = process.env.NODE_ENV === "development";

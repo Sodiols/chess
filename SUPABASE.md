@@ -25,6 +25,9 @@ Run the files, in order, on the project (each is additive and safe to re-run):
    trigger on `auth.users`, statistics, room fixes.
 3. `supabase/migrations/20261109000000_contact.sql` — contact form messages
    (read them in Table Editor → `contact_messages`).
+4. `supabase/migrations/20261110000000_owner_settings.sql` — owner-only Secret Mode:
+   the owner check (confirmed owner email in `auth.users`) and the private
+   `owner_settings` table, reachable only through the API.
 
 - **Supabase CLI:** `supabase link --project-ref <ref>` then `supabase db push`.
 - **Dashboard:** SQL Editor → paste a file → Run (each file in order).

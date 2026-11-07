@@ -13,3 +13,6 @@ next-env.d.ts
 
 # design inspector screenshots
 .taste-skill/
+
+# Stockfish, copied from node_modules by scripts/copy-engine.mjs
+/public/engine/

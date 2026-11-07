@@ -39,6 +39,13 @@ interface ChessBoardProps {
   onClearSelection: () => void;
   /** Sets the pieces down one by one on first render (the landing board). */
   intro?: boolean;
+  /** Purely visual engine guidance drawn above the pieces; never affects input. */
+  overlay?: BoardOverlay;
+}
+
+export interface BoardOverlay {
+  arrows: { from: Square; to: Square; primary: boolean }[];
+  danger: Square[];
 }
 
 export function ChessBoard({
@@ -55,6 +62,7 @@ export function ChessBoard({
   onMove,
   onClearSelection,
   intro = false,
+  overlay,
 }: ChessBoardProps) {
   const boardRef = useRef<HTMLDivElement>(null);
   const cameraRef = useRef<HTMLDivElement>(null);
@@ -359,6 +367,7 @@ export function ChessBoard({
                 </div>
               ))}
             </div>
+            {overlay && <OverlayLayer overlay={overlay} lift={view3d} />}
           </div>
         </div>
       </div>
@@ -383,6 +392,60 @@ export function ChessBoard({
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * Drawn in board coordinates inside the rotating board, so flipping and the 3D
+ * tilt carry it along. pointer-events-none keeps every click and drag going to
+ * the squares underneath.
+ */
+function OverlayLayer({ overlay, lift }: { overlay: BoardOverlay; lift: boolean }) {
+  const centre = (square: Square) => [fileIndex(square) + 0.5, rankIndex(square) + 0.5] as const;
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 8 8"
+      className="pointer-events-none absolute inset-0 size-full"
+      style={lift ? { transform: "translateZ(2px)" } : undefined}
+    >
+      {overlay.danger.map((square) => (
+        <rect
+          key={square}
+          x={fileIndex(square) + 0.06}
+          y={rankIndex(square) + 0.06}
+          width={0.88}
+          height={0.88}
+          rx={0.08}
+          fill="none"
+          stroke="#e0584a"
+          strokeWidth={0.07}
+          opacity={0.9}
+        />
+      ))}
+      {/* Secondary arrows first, so the best move is drawn on top. */}
+      {[...overlay.arrows].reverse().map(({ from, to, primary }) => {
+        const [x1, y1] = centre(from);
+        const [x2, y2] = centre(to);
+        const length = Math.hypot(x2 - x1, y2 - y1);
+        const ux = (x2 - x1) / length;
+        const uy = (y2 - y1) / length;
+        const head = primary ? 0.42 : 0.34;
+        const width = primary ? 0.17 : 0.11;
+        const bx = x2 - ux * head;
+        const by = y2 - uy * head;
+        const color = primary ? "#5fbf5a" : "#7fa7d8";
+        return (
+          <g key={`${from}${to}`} opacity={primary ? 0.85 : 0.55}>
+            <line x1={x1} y1={y1} x2={bx} y2={by} stroke={color} strokeWidth={width} strokeLinecap="round" />
+            <polygon
+              fill={color}
+              points={`${x2},${y2} ${bx - uy * head * 0.6},${by + ux * head * 0.6} ${bx + uy * head * 0.6},${by - ux * head * 0.6}`}
+            />
+          </g>
+        );
+      })}
+    </svg>
   );
 }
 

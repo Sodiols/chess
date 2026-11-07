@@ -15,6 +15,8 @@ interface GameLayoutProps {
   controls: (withDetails: boolean) => React.ReactNode;
   history: PlayedMove[];
   showMoveHistory: boolean;
+  /** Owner-only engine panel: under the controls on phones, above the history on desktop. */
+  coach?: React.ReactNode;
 }
 
 /** Board column plus the desktop side panel, shared by every game mode. */
@@ -28,6 +30,7 @@ export function GameLayout({
   controls,
   history,
   showMoveHistory,
+  coach,
 }: GameLayoutProps) {
   return (
     <div className="mx-auto w-full max-w-[92rem] px-3 pt-2 pb-6 sm:px-6 lg:px-8 lg:pt-4">
@@ -47,6 +50,8 @@ export function GameLayout({
           {status}
 
           <div className="lg:hidden">{controls(true)}</div>
+
+          {coach && <div className="lg:hidden">{coach}</div>}
         </div>
 
         {/* Side panel — desktop only; phones use the drawer instead. */}
@@ -57,6 +62,8 @@ export function GameLayout({
           </header>
 
           <div className="p-2">{top}</div>
+
+          {coach && <div className="max-h-[45%] shrink-0 overflow-y-auto px-2 pb-2">{coach}</div>}
 
           {showMoveHistory ? (
             <MoveHistory history={history} className="mx-2 min-h-32 flex-1 rounded-md bg-canvas/50 py-1.5" />
