@@ -26,7 +26,8 @@ export function Footer() {
       <p
         aria-hidden
         translate="no"
-        className="mt-10 text-[min(28vw,26rem)] leading-[0.78] font-extrabold tracking-[-0.06em] whitespace-nowrap text-[#67635c] select-none"
+        // pointer-events-none: at leading 0.78 the glyphs overflow upward over the links and swallow clicks.
+        className="pointer-events-none mt-10 text-[min(28vw,26rem)] leading-[0.78] font-extrabold tracking-[-0.06em] whitespace-nowrap text-[#67635c] select-none"
       >
         Gambit
       </p>
