@@ -65,7 +65,11 @@ moves, clocks and RLS are tested against real SQL.
   the committed row on a private Realtime channel; clients reconcile by version
   and refetch on any gap, reconnect or tab focus.
 - Clocks run on database time. Clients animate them from server timestamps and
-  only ever *ask* the server to settle a flag.
+  only ever *ask* the server to settle a flag. Online searches expire after 30
+  seconds. Leaving an online game scene pauses the game for 30 seconds. A
+  return within that window resumes the board and clocks. Otherwise the
+  absent player forfeits. When the browser cannot report an exit, a missed
+  heartbeat can take up to 12 seconds to detect.
 
 ## Deploy
 
@@ -81,8 +85,6 @@ moves, clocks and RLS are tested against real SQL.
 - The computer engine is a compact search (Pro reaches about depth 5–6 in two
   seconds); it plays solid club-level chess, not master strength. Stockfish WASM
   would be the upgrade path.
-- Disconnects never forfeit by themselves; an absent player's clock keeps
-  running and the game ends on time.
 - Online boards use the Medium assistance level for both players.
 - Guests from the earlier anonymous version can upgrade by signing up (their
   games stay); this needs anonymous sign-ins still enabled. New visitors use

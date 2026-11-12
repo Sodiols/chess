@@ -31,14 +31,14 @@ export function PlayerPanel({
   return (
     <div
       className={clsx(
-        "flex items-center gap-3 rounded-md px-3 py-2.5 transition-colors duration-300",
+        "flex items-center gap-2 rounded-md px-2.5 py-1.5 transition-colors duration-300 sm:gap-3 sm:px-3 sm:py-2.5",
         active ? "bg-raised" : "bg-surface/60",
       )}
     >
       <span
         aria-hidden
         className={clsx(
-          "size-8 shrink-0 transition-[opacity,transform] duration-300",
+          "hidden size-8 shrink-0 transition-[opacity,transform] duration-300 sm:block",
           active ? "opacity-100" : "scale-90 opacity-50",
         )}
       >
@@ -60,7 +60,7 @@ export function PlayerPanel({
 
         {settings.showCaptured && (
           <CapturedPieces
-            className="mt-1"
+            className={clsx("mt-1", material.captured[color].length === 0 && "max-sm:hidden")}
             pieces={material.captured[color]}
             capturedColor={color === "w" ? "b" : "w"}
             pieceStyle={settings.pieceStyle}

@@ -29,7 +29,6 @@ import { Dialog } from "@/components/ui/Dialog";
 import { OptionGroup } from "@/components/ui/OptionGroup";
 import { TextField } from "@/components/ui/TextField";
 import { Toggle } from "@/components/ui/Toggle";
-import { CopyIcon, LockIcon, RefreshIcon } from "@/components/ui/icons";
 import { TimeControlPicker } from "@/components/multiplayer/TimeControlPicker";
 import { ResumeBanner } from "@/components/multiplayer/OnlineGate";
 
@@ -514,7 +513,6 @@ function HostedRoom({
               size="lg"
               onClick={() => void copy("invite")}
             >
-              <CopyIcon />
               {copied === "invite"
                 ? "Copied"
                 : password
@@ -522,7 +520,6 @@ function HostedRoom({
                   : "Copy invite"}
             </Button>
             <Button size="lg" onClick={() => void copy("id")}>
-              <CopyIcon />
               {copied === "id" ? "Copied" : "Copy room ID"}
             </Button>
           </div>
@@ -642,7 +639,6 @@ function RoomBrowser({ onJoin }: { onJoin: (code: string) => void }) {
           disabled={status === "loading"}
           aria-busy={status === "loading"}
         >
-          <RefreshIcon />
           {status === "loading" ? "Refreshing…" : "Refresh rooms"}
         </Button>
       </div>
@@ -656,7 +652,7 @@ function RoomBrowser({ onJoin }: { onJoin: (code: string) => void }) {
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Search by room ID or name"
-          className="h-11 min-w-0 flex-1 rounded-md border border-line bg-surface px-3.5 text-base sm:text-[0.9375rem] hover:border-line-strong focus:border-accent focus:outline-none sm:max-w-sm"
+          className="h-11 min-w-0 flex-1 basis-full rounded-md border border-line bg-surface px-3.5 sm:basis-auto text-base sm:text-[0.9375rem] hover:border-line-strong focus:border-accent focus:outline-none sm:max-w-sm"
         />
         <label className="sr-only" htmlFor={`${searchId}-time`}>
           Filter by time control
@@ -731,8 +727,7 @@ function RoomCard({ room, onJoin }: { room: RoomSummary; onJoin: () => void }) {
       <div className="min-w-0 flex-1">
         <h3 className="flex items-center gap-2 font-bold">
           <span className="truncate">{room.name}</span>
-          <LockIcon className="size-3.5 shrink-0 text-faint" />
-          <span className="sr-only">(password protected)</span>
+          <span className="shrink-0 text-xs font-medium text-muted">Password required</span>
         </h3>
         <p className="mt-0.5 truncate text-sm text-muted">
           {room.hostName} ·{" "}

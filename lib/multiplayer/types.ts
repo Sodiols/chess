@@ -19,6 +19,9 @@ export interface GameRow {
   white_ms: number;
   black_ms: number;
   turn_started_at: string;
+  paused_at?: string | null;
+  white_reconnect_by?: string | null;
+  black_reconnect_by?: string | null;
   result: "white" | "black" | "draw" | null;
   result_reason: WinReason | DrawReason | null;
   draw_offered_by: string | null;
@@ -158,6 +161,7 @@ const ERROR_MESSAGES: Record<string, string> = {
   not_participant: "You're not a player in this game.",
   not_your_turn: "It's not your turn.",
   stale: "The position changed. Syncing…",
+  game_paused: "The game is paused while a player reconnects.",
   game_over: "This game has finished.",
   flagged: "Your time ran out.",
   illegal_move: "That move isn't legal.",

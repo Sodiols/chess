@@ -1,55 +1,67 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useState } from "react";
 import clsx from "clsx";
 import { useGameSettings } from "@/hooks/useGameSettings";
 import { SettingsDialog } from "@/components/game/SettingsDialog";
-import { GearIcon } from "@/components/ui/icons";
-import { Wordmark } from "./Wordmark";
 import { AccountMenu } from "./AccountMenu";
 
 interface NavbarProps {
-  /** The game screen uses a slimmer bar without the section links. */
   variant?: "full" | "game";
 }
+
+const navControl = "inline-flex min-h-11 shrink-0 items-center whitespace-nowrap px-2 text-sm font-semibold text-muted hover:text-ink sm:px-3";
 
 export function Navbar({ variant = "full" }: NavbarProps) {
   const { settings, updateSettings } = useGameSettings();
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const pathname = usePathname();
+  const full = variant === "full";
 
   return (
-    <header
-      className={clsx(
-        "sticky top-0 z-20 bg-canvas",
-        variant === "game" ? "h-13" : "h-15",
-      )}
-    >
+    <header className={clsx("relative z-20 bg-surface", full ? "sm:sticky sm:top-0" : "sticky top-0")}>
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-4 focus:z-40 focus:bg-accent focus:px-4 focus:py-2 focus:text-canvas"
+      >
+        Skip to content
+      </a>
       <nav
         aria-label="Main"
-        className="mx-auto flex h-full max-w-[92rem] items-center gap-3 px-4 sm:gap-6 sm:px-6 lg:px-8"
+        className={clsx(
+          "mx-auto grid max-w-[92rem] items-center px-4 sm:px-6 lg:px-8",
+          full
+            ? "grid-cols-[auto_1fr] gap-x-2 pt-1 pb-0.5 sm:min-h-16 sm:grid-cols-[minmax(0,1fr)_auto_minmax(max-content,1fr)] sm:gap-x-6 sm:py-0"
+            : "min-h-13 grid-cols-[auto_1fr] gap-x-2",
+        )}
       >
-        <Link href="/" className="shrink-0 rounded" aria-label="Gambit home">
-          <Wordmark />
+        <Link
+          href="/"
+          translate="no"
+          aria-label="Gambit home"
+          className="inline-flex min-h-11 w-fit items-center text-[1.375rem] leading-none font-extrabold tracking-tight text-ink hover:text-accent sm:text-2xl"
+        >
+          Gambit
         </Link>
 
-        {variant === "full" && (
-          <div className="ml-auto flex items-center gap-1">
-            <NavLink href="/play">Play</NavLink>
-            <NavLink href="/how-to-play" className="hidden sm:inline-block">
-              How to play
-            </NavLink>
+        {full && (
+          <div className="flex items-center justify-end sm:gap-2">
+            <NavLink href="/play" pathname={pathname}>Play</NavLink>
+            <NavLink href="/how-to-play" pathname={pathname}>How to Play</NavLink>
           </div>
         )}
 
-        <div className={clsx("flex items-center gap-1", variant === "game" && "ml-auto")}>
+        <div className={clsx("flex min-w-0 items-center justify-end sm:gap-1", full && "col-span-2 max-sm:justify-between sm:col-span-1")}>
           <button
             type="button"
             onClick={() => setSettingsOpen(true)}
             aria-label="Game settings"
-            className="press flex size-10 items-center justify-center rounded-md text-muted hover:bg-raised hover:text-ink"
+            aria-haspopup="dialog"
+            className={clsx(navControl, full && "max-sm:pl-0")}
           >
-            <GearIcon />
+            Settings
           </button>
           <AccountMenu />
         </div>
@@ -66,11 +78,13 @@ export function Navbar({ variant = "full" }: NavbarProps) {
   );
 }
 
-function NavLink({ href, className, children }: { href: string; className?: string; children: React.ReactNode }) {
+function NavLink({ href, pathname, children }: { href: string; pathname: string; children: React.ReactNode }) {
+  const active = pathname === href || pathname.startsWith(`${href}/`);
   return (
     <Link
       href={href}
-      className={clsx("press rounded-md px-3 py-2 text-[0.9375rem] font-medium text-muted hover:bg-raised hover:text-ink", className)}
+      aria-current={pathname === href ? "page" : active ? "location" : undefined}
+      className={clsx(navControl, active && "underline decoration-accent decoration-2 underline-offset-8")}
     >
       {children}
     </Link>

@@ -26,7 +26,7 @@ export default async function PlayPage({
   return (
     <>
       <Navbar />
-      <main className="mx-auto grid w-full max-w-[92rem] gap-x-16 gap-y-12 px-4 pt-10 pb-24 sm:px-6 sm:pt-14 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:px-8">
+      <main id="main-content" tabIndex={-1} className="mx-auto grid w-full max-w-[92rem] gap-x-16 gap-y-12 px-4 pt-10 pb-24 sm:px-6 sm:pt-14 lg:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] lg:px-8">
         <div>
           <h1 className="animate-enter text-[2.5rem] leading-[1] font-extrabold sm:text-[3.5rem]">
             How do you want to play?

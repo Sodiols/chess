@@ -12,7 +12,6 @@ import { api } from "@/lib/multiplayer/client";
 import { OnlineGameStore } from "@/lib/multiplayer/onlineGameStore";
 import { errorMessage, rowResult, type GameAction, type GameRow, type GameSnapshot, type MoveRow } from "@/lib/multiplayer/types";
 import { getBrowserClient } from "@/lib/supabase/browser";
-import { DISCONNECT_GRACE_MS } from "@/lib/supabase/config";
 import type { Rejection } from "./useChessGame";
 
 export type Connection = "connecting" | "connected" | "reconnecting" | "offline";
@@ -33,8 +32,6 @@ export function useOnlineGame(gameId: string, playerId: string, sound: boolean) 
 
   const [loadError, setLoadError] = useState<string | null>(null);
   const [connection, setConnection] = useState<Connection>("connecting");
-  const [opponentPresent, setOpponentPresent] = useState<boolean | null>(null);
-  const [opponentAway, setOpponentAway] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [selected, setSelected] = useState<Square | null>(null);
   const [pendingPromotion, setPendingPromotion] = useState<{ from: Square; to: Square } | null>(null);
@@ -86,7 +83,7 @@ export function useOnlineGame(gameId: string, playerId: string, sound: boolean) 
   );
 
   // ---------------------------------------------------------------------------
-  // Realtime: authorised private channel with database broadcasts and presence.
+  // Realtime: authorised private channel with database broadcasts.
   // ---------------------------------------------------------------------------
 
   useEffect(() => {
@@ -107,7 +104,7 @@ export function useOnlineGame(gameId: string, playerId: string, sound: boolean) 
       if (cancelled) return;
 
       const subscribed = supabase.channel(`game:${gameId}`, {
-        config: { private: true, presence: { key: playerId } },
+        config: { private: true },
       });
       channel = subscribed;
       subscribed
@@ -115,18 +112,12 @@ export function useOnlineGame(gameId: string, playerId: string, sound: boolean) 
           const { game: row, move } = payload as { game?: GameRow; move?: MoveRow | null };
           if (row) applyServer(row, move ?? null);
         })
-        .on("presence", { event: "sync" }, () => {
-          // Only the two participants may join this topic, so any other key is the opponent.
-          const others = Object.keys(subscribed.presenceState()).filter((key) => key !== playerId);
-          setOpponentPresent(others.length > 0);
-        })
         .subscribe((status) => {
           if (cancelled) return;
           if (status === "SUBSCRIBED") {
             setConnection("connected");
             // Covers anything broadcast before we joined or while we were away.
             void resync();
-            void subscribed.track({ joinedAt: Date.now() });
           } else {
             setConnection(navigator.onLine ? "reconnecting" : "offline");
           }
@@ -137,7 +128,7 @@ export function useOnlineGame(gameId: string, playerId: string, sound: boolean) 
       cancelled = true;
       if (channel) void supabase.removeChannel(channel);
     };
-  }, [applyServer, gameId, playerId, resync]);
+  }, [applyServer, gameId, resync]);
 
   // Network and tab-visibility changes are the common ways to miss events.
   useEffect(() => {
@@ -159,18 +150,85 @@ export function useOnlineGame(gameId: string, playerId: string, sound: boolean) 
     };
   }, [resync]);
 
-  // A brief absence (a refresh, a tunnel) shouldn't alarm the other player.
+  const active = game?.status === "active";
   useEffect(() => {
-    if (opponentPresent !== false) return;
-    const timer = setTimeout(() => setOpponentAway(true), DISCONNECT_GRACE_MS);
-    return () => {
-      clearTimeout(timer);
-      setOpponentAway((away) => {
-        if (away) setNotice("Opponent reconnected.");
-        return false;
+    if (!active) return;
+    const path = `/api/games/${gameId}`;
+    let sceneId = crypto.randomUUID();
+    let accessToken: string | null = null;
+    let left = false;
+    let inFlight: string | null = null;
+    const auth = getBrowserClient()?.auth.onAuthStateChange((_event, session) => {
+      accessToken = session?.access_token ?? null;
+    });
+
+    const heartbeat = async () => {
+      if (left || inFlight === sceneId) return;
+      const id = sceneId;
+      inFlight = id;
+      const startedAt = Date.now();
+      const response = await api<{ game: GameRow; serverNow: string }>(path, {
+        method: "POST",
+        body: { sceneId: id, leaving: false },
       });
+      if (inFlight === id) inFlight = null;
+      if (left || sceneId !== id || !response.ok) return;
+      const current = store.getGame();
+      if (current && response.game.version > current.version) {
+        store.syncClock(response.serverNow, startedAt, Date.now());
+        // A move recovered through polling needs the complete move list.
+        applyServer(response.game, null);
+      }
     };
-  }, [opponentPresent]);
+
+    const leave = () => {
+      if (left) return;
+      left = true;
+      if (!accessToken) return; // The lease also expires if delivery fails.
+      void fetch(path, {
+        method: "POST",
+        headers: { authorization: `Bearer ${accessToken}`, "content-type": "application/json" },
+        body: JSON.stringify({ sceneId, leaving: true }),
+        keepalive: true,
+      }).catch(() => {});
+    };
+
+    const returnToScene = () => {
+      if (left) {
+        sceneId = crypto.randomUUID();
+        left = false;
+      }
+      void heartbeat();
+    };
+    const onVisible = () => {
+      if (document.visibilityState === "visible") returnToScene();
+    };
+
+    void heartbeat();
+    const timer = window.setInterval(heartbeat, 3000);
+    window.addEventListener("pagehide", leave);
+    window.addEventListener("pageshow", returnToScene);
+    window.addEventListener("online", returnToScene);
+    document.addEventListener("visibilitychange", onVisible);
+    return () => {
+      leave();
+      auth?.data.subscription.unsubscribe();
+      window.clearInterval(timer);
+      window.removeEventListener("pagehide", leave);
+      window.removeEventListener("pageshow", returnToScene);
+      window.removeEventListener("online", returnToScene);
+      document.removeEventListener("visibilitychange", onVisible);
+    };
+  }, [active, applyServer, gameId, store]);
+
+  const ownDeadline = myColor === "w" ? game?.white_reconnect_by : game?.black_reconnect_by;
+  const opponentDeadline = myColor === "w" ? game?.black_reconnect_by : game?.white_reconnect_by;
+  const deadline = active ? opponentDeadline ?? ownDeadline : null;
+  useEffect(() => {
+    if (!deadline) return;
+    const timer = window.setTimeout(() => void resync(), Math.max(0, Date.parse(deadline) - store.offsetMs - Date.now()) + 100);
+    return () => window.clearTimeout(timer);
+  }, [deadline, resync, store]);
 
   useEffect(() => {
     if (!notice) return;
@@ -215,7 +273,7 @@ export function useOnlineGame(gameId: string, playerId: string, sound: boolean) 
     const reading = store.clockReading();
     if (!current || !reading) return;
     clock.restore(reading, current.turn);
-    if (current.status !== "active") clock.stop();
+    if (current.status !== "active" || current.paused_at) clock.stop();
   }, [clock, clockKey, store]);
 
   // ---------------------------------------------------------------------------
@@ -254,8 +312,8 @@ export function useOnlineGame(gameId: string, playerId: string, sound: boolean) 
   // Moves
   // ---------------------------------------------------------------------------
 
-  const myTurn = Boolean(game && game.status === "active" && myColor && position.turn === myColor);
-  const isInteractive = myTurn && !view.pending && pendingPromotion === null;
+  const myTurn = Boolean(game && game.status === "active" && !game.paused_at && myColor && position.turn === myColor);
+  const isInteractive = myTurn && connection !== "offline" && !view.pending && pendingPromotion === null;
 
   const submit = useCallback(
     async (from: Square, to: Square, promotion: PieceSymbol | null) => {
@@ -359,7 +417,8 @@ export function useOnlineGame(gameId: string, playerId: string, sound: boolean) 
     result,
     loadError,
     connection,
-    opponentAway: opponentAway && !finished,
+    reconnectBy: deadline ? Date.parse(deadline) - store.offsetMs : null,
+    opponentAway: Boolean(active && opponentDeadline),
     notice,
     clock,
     selected,

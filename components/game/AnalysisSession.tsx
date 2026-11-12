@@ -25,7 +25,7 @@ export function AnalysisSession() {
     return (
       <>
         <Navbar />
-        <main className="mx-auto max-w-md px-6 pt-24 text-center">
+        <main id="main-content" tabIndex={-1} className="mx-auto max-w-md px-6 pt-24 text-center">
           <h1 className="text-xl font-bold">Page not found</h1>
           <p className="mt-2 text-sm text-muted">
             <Link href="/play" className="text-accent hover:underline">
@@ -41,7 +41,7 @@ export function AnalysisSession() {
   return (
     <>
       <Navbar variant="game" />
-      <main className="pt-3">
+      <main id="main-content" tabIndex={-1} className="pt-3">
         {!settings.enabled && (
           <p className="mx-auto max-w-[92rem] px-3 pb-2 text-sm text-muted sm:px-6 lg:px-8">
             Secret Mode is off. Turn it on in Settings to see engine analysis.

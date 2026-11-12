@@ -15,7 +15,7 @@ export default function ContactPage() {
   return (
     <>
       <Navbar />
-      <main className="mx-auto max-w-[40rem] px-4 pt-10 pb-16 sm:px-6 lg:pt-14">
+      <main id="main-content" tabIndex={-1} className="mx-auto max-w-[40rem] px-4 pt-10 pb-16 sm:px-6 lg:pt-14">
         <h1 className="animate-enter text-[2.5rem] leading-[1.02] font-extrabold sm:text-[3.5rem]">Contact us</h1>
         <p className="mt-5 text-lg leading-relaxed text-muted">
           Found a bug, have an idea or a question? Many answers are already in the{" "}

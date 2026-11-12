@@ -8,7 +8,7 @@ export function OnlineGameScreen({ gameId }: { gameId: string }) {
   return (
     <>
       <Navbar variant="game" />
-      <main className="pt-3">
+      <main id="main-content" tabIndex={-1} className="pt-3">
         <OnlineGate bare>
           {/* Keyed so a rematch starts from a clean store and clock. */}
           {(profile) => <OnlineGame key={gameId} gameId={gameId} playerId={profile.id} />}

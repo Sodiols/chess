@@ -45,7 +45,7 @@ export function PlayFlow({ initialMode, variant = "local" }: PlayFlowProps) {
     return (
       <>
         <Navbar />
-        <main className="pt-8 sm:pt-10">
+        <main id="main-content" tabIndex={-1} className="pt-8 sm:pt-10">
           <GameSetup initialMode={initialMode} onStart={start} variant={variant} />
         </main>
       </>
@@ -55,7 +55,7 @@ export function PlayFlow({ initialMode, variant = "local" }: PlayFlowProps) {
   return (
     <>
       <Navbar variant="game" />
-      <main className="pt-3">
+      <main id="main-content" tabIndex={-1} className="pt-3">
         <ChessGame
           key={gameId}
           config={config}

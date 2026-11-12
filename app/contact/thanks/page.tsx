@@ -14,7 +14,7 @@ export default function ContactThanksPage() {
   return (
     <>
       <Navbar />
-      <main className="mx-auto max-w-[40rem] px-4 pt-10 pb-16 sm:px-6 lg:pt-14">
+      <main id="main-content" tabIndex={-1} className="mx-auto max-w-[40rem] px-4 pt-10 pb-16 sm:px-6 lg:pt-14">
         <h1 className="animate-enter text-[2.5rem] leading-[1.02] font-extrabold sm:text-[3.5rem]">Thank you!</h1>
         <p className="mt-5 text-lg leading-relaxed text-muted">
           Your message has arrived. We read every one and will reply to the email address you gave us.

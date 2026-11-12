@@ -36,7 +36,7 @@ export default function HomePage() {
       />
       <Navbar />
 
-      <main>
+      <main id="main-content" tabIndex={-1}>
         <section className="mx-auto grid max-w-[92rem] items-center gap-12 px-4 pt-10 pb-20 sm:px-6 lg:min-h-[calc(100dvh-3.75rem)] lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)] lg:gap-10 lg:px-8 lg:pt-6 lg:pb-16">
           <div>
             <h1 className="animate-enter text-[clamp(3.25rem,7.6vw,7.5rem)] leading-[0.94] font-extrabold tracking-[-0.045em]">

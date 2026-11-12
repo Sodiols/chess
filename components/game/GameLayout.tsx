@@ -33,15 +33,15 @@ export function GameLayout({
   coach,
 }: GameLayoutProps) {
   return (
-    <div className="mx-auto w-full max-w-[92rem] px-3 pt-2 pb-6 sm:px-6 lg:px-8 lg:pt-4">
+    <div className="mx-auto w-full max-w-[92rem] px-3 pt-2 pb-[max(1.5rem,env(safe-area-inset-bottom))] sm:px-6 lg:px-8 lg:pt-4">
       <div className="grid items-start gap-4 lg:grid-cols-[minmax(0,1fr)_23rem] lg:gap-10">
         {/* Board column */}
-        <div className="flex flex-col gap-2.5">
+        <div className="flex min-w-0 flex-col gap-2 sm:gap-2.5">
           <div className="lg:hidden">{top}</div>
 
           {/* Width is bounded by the remaining viewport height (players, status,
               controls and the 3D rim's extra depth), so the board and controls fit. */}
-          <div className="mx-auto w-full max-w-[min(100%,max(17rem,calc(100dvh-23rem)))] lg:max-w-[min(48rem,calc(100dvh-11rem))]">
+          <div className="mx-auto w-full max-w-[min(100%,max(20rem,calc(100svh-17rem)))] lg:max-w-[min(48rem,calc(100dvh-11rem))]">
             {board}
           </div>
 

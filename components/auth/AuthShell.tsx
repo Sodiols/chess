@@ -27,7 +27,7 @@ export function AuthShell({
   return (
     <>
       <Navbar />
-      <main className="mx-auto grid w-full max-w-[92rem] items-center gap-16 px-4 pt-8 pb-20 sm:px-6 lg:min-h-[calc(100dvh-3.75rem)] lg:grid-cols-[minmax(0,29rem)_minmax(0,1fr)] lg:gap-20 lg:px-8 lg:pt-4 lg:pb-12">
+      <main id="main-content" tabIndex={-1} className="mx-auto grid w-full max-w-[92rem] items-center gap-16 px-4 pt-8 pb-20 sm:px-6 lg:min-h-[calc(100dvh-3.75rem)] lg:grid-cols-[minmax(0,29rem)_minmax(0,1fr)] lg:gap-20 lg:px-8 lg:pt-4 lg:pb-12">
         <div className="mx-auto w-full max-w-md lg:mx-0">
           <h1 className="animate-enter text-[2.25rem] leading-[1.02] font-extrabold sm:text-[2.75rem]">{title}</h1>
           {description && (

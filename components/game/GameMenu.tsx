@@ -2,7 +2,6 @@
 
 import { Dialog } from "@/components/ui/Dialog";
 import { Button } from "@/components/ui/Button";
-import { FlagIcon, GearIcon, HandshakeIcon, UndoIcon } from "@/components/ui/icons";
 
 interface GameMenuProps {
   open: boolean;
@@ -47,16 +46,13 @@ export function GameMenu({
         <div className="grid grid-cols-2 gap-2 pt-1">
           {showDraw && (
             <Button onClick={onOfferDraw} disabled={!canOfferDraw}>
-              <HandshakeIcon />
               Offer draw
             </Button>
           )}
           <Button onClick={onRestart}>
-            <UndoIcon />
             Restart
           </Button>
           <Button onClick={onSettings}>
-            <GearIcon />
             Settings
           </Button>
           <Button variant="ghost" onClick={onHome}>
@@ -65,7 +61,6 @@ export function GameMenu({
         </div>
 
         <Button variant="danger" block onClick={onResign} className="mt-1">
-          <FlagIcon />
           Resign as {turnName}
         </Button>
       </div>

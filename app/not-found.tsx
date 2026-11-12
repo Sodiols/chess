@@ -13,7 +13,7 @@ export default function NotFound() {
   return (
     <>
       <Navbar />
-      <main className="mx-auto grid w-full max-w-[92rem] items-center gap-12 px-4 pt-10 pb-16 sm:px-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)] lg:px-8 lg:pt-16">
+      <main id="main-content" tabIndex={-1} className="mx-auto grid w-full max-w-[92rem] items-center gap-12 px-4 pt-10 pb-16 sm:px-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)] lg:px-8 lg:pt-16">
         <div>
           <p className="font-mono text-sm text-faint">Error 404</p>
           <h1 className="mt-3 animate-enter text-[2.5rem] leading-[1] font-extrabold sm:text-[3.5rem]">

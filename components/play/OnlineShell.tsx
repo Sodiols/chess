@@ -19,7 +19,7 @@ export function OnlineShell({
   return (
     <>
       <Navbar />
-      <main
+      <main id="main-content" tabIndex={-1}
         className={`mx-auto w-full px-4 pt-10 pb-24 sm:px-6 sm:pt-14 lg:px-8 ${width === "wide" ? "max-w-[92rem]" : "max-w-[80rem]"}`}
       >
         <h1 className="animate-enter text-[2.5rem] leading-[1] font-extrabold sm:text-[3.5rem]">

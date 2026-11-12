@@ -28,6 +28,8 @@ Run the files, in order, on the project (each is additive and safe to re-run):
 4. `supabase/migrations/20261110000000_owner_settings.sql` — owner-only Secret Mode:
    the owner check (confirmed owner email in `auth.users`) and the private
    `owner_settings` table, reachable only through the API.
+5. `supabase/migrations/20261112000000_game_reconnect.sql` — 30-second matchmaking
+   expiry and online game reconnect grace.
 
 - **Supabase CLI:** `supabase link --project-ref <ref>` then `supabase db push`.
 - **Dashboard:** SQL Editor → paste a file → Run (each file in order).
@@ -83,10 +85,10 @@ Preview, then redeploy.
 
 ## 5. Expired games and rooms
 
-Clocks are checked on every move, game load, timeout claim and lobby visit, so
+Clocks and reconnect deadlines are checked on game loads, moves, and scene heartbeats, so
 a game always ends correctly once someone looks at it, and a flagged game never
 blocks its players from starting another. For abandoned games nobody opens,
-`public.run_maintenance()` settles clocks, expires rooms and clears stale queue
+`public.run_maintenance()` settles clocks and reconnect deadlines, expires rooms and clears stale queue
 entries:
 
 - With `pg_cron` enabled (Database → Extensions) **before** running the first

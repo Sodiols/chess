@@ -147,6 +147,19 @@ describe("matchmaking", () => {
     expect(repeat).toMatchObject({ status: "matched", gameId });
   });
 
+  it("expires a search after 30 seconds without extending it on repeat requests", async () => {
+    const player = await createUser(db);
+    await rpc(db, "matchmake", [player, 29 * ONE_MIN, 0]);
+    const expiry = async () => (await db.query<{ lifetime: number; expires_at: Date }>(
+      "select round(extract(epoch from expires_at - created_at))::int as lifetime, expires_at from public.matchmaking_queue where player_id = $1",
+      [player],
+    )).rows[0]!;
+    const first = await expiry();
+    expect(first.lifetime).toBe(30);
+    await rpc(db, "matchmake", [player, 29 * ONE_MIN, 0]);
+    expect(await expiry()).toEqual(first);
+  });
+
   it("rate limits repeated searches", async () => {
     const a = await createUser(db);
     let last: Result | undefined;
@@ -445,5 +458,78 @@ describe("contact messages", () => {
     const { rows } = await db.query<{ n: number }>("select count(*)::int as n from public.contact_messages");
     expect(rows[0]!.n).toBe(2);
     await expect(asUser(db, randomUUID(), "select * from public.contact_messages", [])).rejects.toThrow(/permission denied/);
+  });
+});
+
+describe("game scene reconnect grace", () => {
+  it("freezes the position and clock, and resumes from the same position", async () => {
+    const { gameId, white, black } = await startGame();
+    const whiteScene = randomUUID();
+    const blackScene = randomUUID();
+    await rpc(db, "update_game_scene", [gameId, white, whiteScene, false]);
+    await rpc(db, "update_game_scene", [gameId, black, blackScene, false]);
+    expect(await play(gameId, white, "e4")).toMatchObject({ ok: true });
+    const left = await rpc(db, "update_game_scene", [gameId, black, blackScene, true]);
+    expect(left.game).toMatchObject({ status: "active", ply: 1, turn: "b", paused_at: expect.any(String) });
+    expect(await play(gameId, black, "e5")).toMatchObject({ ok: false, error: "game_paused" });
+    // A heartbeat already in flight when the player left cannot reopen the old scene.
+    const stale = await rpc(db, "update_game_scene", [gameId, black, blackScene, false]);
+    expect(stale.game).toMatchObject({ paused_at: expect.any(String) });
+    const back = await rpc(db, "update_game_scene", [gameId, black, randomUUID(), false]);
+    expect(back.game).toMatchObject({ status: "active", ply: 1, paused_at: null });
+    expect(await play(gameId, black, "e5")).toMatchObject({ ok: true, game: { ply: 2 } });
+  });
+
+  it("detects an expired heartbeat and awards the opponent a win after the grace period", async () => {
+    const { gameId, white, black } = await startGame();
+    const whiteScene = randomUUID();
+    const blackScene = randomUUID();
+    await rpc(db, "update_game_scene", [gameId, white, whiteScene, false]);
+    await rpc(db, "update_game_scene", [gameId, black, blackScene, false]);
+    await db.query(
+      "update public.game_scene_connections set online_until = now() - interval '1 second' where scene_id = $1",
+      [whiteScene],
+    );
+    const paused = await rpc(db, "update_game_scene", [gameId, black, blackScene, false]);
+    expect(paused.game).toMatchObject({ status: "active", white_reconnect_by: expect.any(String), black_reconnect_by: null });
+    await db.query(
+      "update public.game_scene_connections set online_until = now() - interval '31 seconds' where scene_id = $1",
+      [whiteScene],
+    );
+    const late = await rpc(db, "update_game_scene", [gameId, white, randomUUID(), false]);
+    expect(late.game).toMatchObject({ status: "finished", result: "black", result_reason: "disconnect" });
+    expect(await rpc(db, "get_profile", [black])).toMatchObject({ profile: { activeGameId: null } });
+    expect(await rpc(db, "get_profile", [white])).toMatchObject({ profile: { activeGameId: null } });
+  });
+
+  it("keeps a private room match active while the player has another open game tab", async () => {
+    const host = await createUser(db);
+    const guest = await createUser(db);
+    const room = await rpc<Result>(db, "create_room", [host, "Reconnect room", "secret123", 5 * ONE_MIN, 0, "w", false]);
+    const joined = await rpc<Result>(db, "join_room", [guest, room.room!.code, "secret123"]);
+    const gameId = joined.gameId!;
+    const hostScene = randomUUID();
+    await rpc(db, "update_game_scene", [gameId, host, hostScene, false]);
+    await rpc(db, "update_game_scene", [gameId, host, randomUUID(), false]);
+    await rpc(db, "update_game_scene", [gameId, guest, randomUUID(), false]);
+    const left = await rpc(db, "update_game_scene", [gameId, host, hostScene, true]);
+    expect(left.game).toMatchObject({ paused_at: null });
+    expect(await play(gameId, host, "e4")).toMatchObject({ ok: true });
+  });
+
+  it("settles a forfeit during maintenance when both game tabs have closed", async () => {
+    const { gameId, white, black } = await startGame();
+    await rpc(db, "update_game_scene", [gameId, white, randomUUID(), false]);
+    await rpc(db, "update_game_scene", [gameId, black, randomUUID(), false]);
+    await db.query(
+      "update public.chess_games set presence_started_at = now() - interval '50 seconds' where id = $1",
+      [gameId],
+    );
+    await db.query(
+      "update public.game_scene_connections set online_until = now() - case when player_id = $2 then interval '35 seconds' else interval '15 seconds' end where game_id = $1",
+      [gameId, black],
+    );
+    await rpc(db, "run_maintenance", []);
+    expect(await game(gameId)).toMatchObject({ status: "finished", result: "white", result_reason: "disconnect" });
   });
 });

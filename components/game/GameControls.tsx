@@ -2,7 +2,6 @@
 
 import clsx from "clsx";
 import { Button } from "@/components/ui/Button";
-import { FlipIcon, HandshakeIcon, ListIcon, MenuIcon, UndoIcon } from "@/components/ui/icons";
 
 interface GameControlsProps {
   canUndo: boolean;
@@ -35,42 +34,38 @@ export function GameControls({
   className,
 }: GameControlsProps) {
   return (
-    <div className={clsx("flex items-center gap-1.5", className)}>
+    <div className={clsx("flex flex-wrap items-center gap-1 sm:gap-1.5", className)}>
       {showUndo && (
-        <Button size="sm" variant="ghost" onClick={onUndo} disabled={!canUndo} aria-label="Undo last move">
-          <UndoIcon />
-          <span className="hidden sm:inline">Undo</span>
+        <Button size="sm" className="max-sm:h-11 max-sm:px-2.5" variant="ghost" onClick={onUndo} disabled={!canUndo} aria-label="Undo last move">
+          Undo
         </Button>
       )}
 
       {showFlip && (
-        <Button size="sm" variant="ghost" onClick={onFlip} aria-label="Flip board">
-          <FlipIcon />
-          <span className="hidden sm:inline">Flip</span>
+        <Button size="sm" className="max-sm:h-11 max-sm:px-2.5" variant="ghost" onClick={onFlip} aria-label="Flip board">
+          Flip
         </Button>
       )}
 
       {showDraw && (
         <Button
-          size="sm"
+          size="sm" className="max-sm:h-11 max-sm:px-2.5"
           variant="ghost"
           onClick={onOfferDraw}
           disabled={!canOfferDraw}
           aria-label="Offer a draw"
         >
-          <HandshakeIcon />
-          <span className="hidden sm:inline">Draw</span>
+          Draw
         </Button>
       )}
 
       {onOpenDetails && (
-        <Button size="sm" variant="ghost" onClick={onOpenDetails} aria-label="Show moves and captures">
-          <ListIcon />
+        <Button size="sm" className="max-sm:h-11 max-sm:px-2.5" variant="ghost" onClick={onOpenDetails} aria-label="Show moves and captures">
+          Details
         </Button>
       )}
 
-      <Button size="sm" variant="secondary" onClick={onOpenMenu} className="ml-auto">
-        <MenuIcon />
+      <Button size="sm" className="max-sm:h-11 max-sm:px-2.5" variant="secondary" onClick={onOpenMenu}>
         Menu
       </Button>
     </div>

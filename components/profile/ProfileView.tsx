@@ -44,7 +44,7 @@ export function ProfileView() {
   return (
     <>
       <Navbar />
-      <main className="mx-auto w-full max-w-[72rem] px-4 pt-10 pb-24 sm:px-6 sm:pt-14 lg:px-8">
+      <main id="main-content" tabIndex={-1} className="mx-auto w-full max-w-[72rem] px-4 pt-10 pb-24 sm:px-6 sm:pt-14 lg:px-8">
         {auth.status === "unconfigured" ? (
           <p className="py-16 text-center text-sm text-muted">
             Accounts aren&rsquo;t configured on this server.

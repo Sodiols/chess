@@ -54,7 +54,7 @@ export function Dialog({
         if (dismissible && event.target === ref.current) onClose();
       }}
       className={clsx(
-        "bg-transparent p-0 text-ink backdrop:animate-fade",
+        "max-h-[calc(100dvh-1rem)] overscroll-contain bg-transparent p-0 text-ink backdrop:animate-fade",
         placement === "bottom"
           ? "mx-auto mt-auto mb-0 w-full max-w-[36rem]"
           : clsx("m-auto w-[calc(100vw-2rem)]", size === "sm" ? "max-w-[26rem]" : "max-w-[34rem]"),
@@ -63,7 +63,7 @@ export function Dialog({
       {open && (
         <div
           className={clsx(
-            "bg-raised p-6 shadow-[0_30px_80px_-16px_rgba(0,0,0,0.8)] sm:p-7",
+            "bg-raised p-4 shadow-[0_30px_80px_-16px_rgba(0,0,0,0.8)] sm:p-6",
             placement === "bottom"
               ? "animate-slide-up rounded-t-2xl pb-[max(1.25rem,env(safe-area-inset-bottom))]"
               : "animate-rise rounded-lg",

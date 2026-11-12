@@ -76,7 +76,7 @@ export default function FaqPage() {
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(STRUCTURED_DATA) }} />
       <Navbar />
-      <main className="mx-auto max-w-[52rem] px-4 pt-10 pb-16 sm:px-6 lg:pt-14">
+      <main id="main-content" tabIndex={-1} className="mx-auto max-w-[52rem] px-4 pt-10 pb-16 sm:px-6 lg:pt-14">
         <h1 className="animate-enter text-[2.5rem] leading-[1.02] font-extrabold sm:text-[3.5rem]">
           Frequently asked questions
         </h1>

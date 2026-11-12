@@ -14,7 +14,6 @@ import { ChessBoard } from "@/components/chess/ChessBoard";
 import { Button } from "@/components/ui/Button";
 import { ConfirmationDialog } from "@/components/ui/ConfirmationDialog";
 import { Dialog } from "@/components/ui/Dialog";
-import { PauseIcon } from "@/components/ui/icons";
 import { EngineCoach, EvalBar } from "./EngineCoach";
 import { GameControls } from "./GameControls";
 import { GameMenu } from "./GameMenu";
@@ -142,7 +141,6 @@ export function ChessGame({
 
         {paused && !result && overlay === "none" && (
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 rounded-md bg-canvas/80 backdrop-blur-[2px]">
-            <PauseIcon className="size-7 text-accent" />
             <p className="text-sm font-medium">Clocks paused</p>
             <Button size="sm" variant="primary" onClick={game.togglePause}>
               Resume game

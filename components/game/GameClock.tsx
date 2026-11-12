@@ -28,7 +28,7 @@ export function GameClock({ clock, color }: GameClockProps) {
       role="timer"
       aria-label={`${color === "w" ? "White" : "Black"} clock`}
       className={clsx(
-        "numeric rounded-md px-3 py-1 text-[1.25rem] leading-tight font-semibold tabular-nums transition-colors duration-300 sm:text-[1.5rem]",
+        "numeric rounded-md px-2.5 py-1 text-lg leading-tight font-semibold tabular-nums transition-colors duration-300 sm:px-3 sm:text-[1.5rem]",
         active && !paused
           ? low
             ? "bg-danger text-[#1a0b09]"

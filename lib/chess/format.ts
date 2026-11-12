@@ -77,6 +77,7 @@ export function describeResult(
       checkmate: "Checkmate",
       resignation: "Resignation",
       timeout: "Time out",
+      disconnect: "Disconnect",
     }[result.reason];
     const loser = result.winner === "w" ? "b" : "w";
     const detail =
@@ -84,7 +85,9 @@ export function describeResult(
         ? `${players[loser]} resigned`
         : result.reason === "timeout"
           ? `${players[loser]} ran out of time`
-          : `${players[result.winner]} delivered mate`;
+          : result.reason === "disconnect"
+            ? `${players[loser]} did not reconnect within 30 seconds`
+            : `${players[result.winner]} delivered mate`;
     return { headline: `${reason} — ${players[result.winner]} wins`, detail };
   }
 
@@ -94,6 +97,7 @@ export function describeResult(
     "fifty-move-rule": "Fifty moves passed with no capture and no pawn move",
     "insufficient-material": "Neither side has enough material to deliver mate",
     agreement: "Both players agreed to a draw",
+    "mutual-disconnect": "Both players disconnected at the same time",
     "timeout-insufficient-material":
       "A player ran out of time, but the opponent cannot deliver mate",
   }[result.reason];
@@ -104,6 +108,7 @@ export function describeResult(
     "fifty-move-rule": "Draw — Fifty-move rule",
     "insufficient-material": "Draw — Insufficient material",
     agreement: "Draw — By agreement",
+    "mutual-disconnect": "Draw — Both players disconnected",
     "timeout-insufficient-material": "Draw — Timeout vs insufficient material",
   }[result.reason];
 

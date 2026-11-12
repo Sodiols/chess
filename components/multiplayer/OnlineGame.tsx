@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import clsx from "clsx";
 import type { Color } from "@/types";
 import { ASSISTANCE } from "@/constants/assistance";
 import { useGameSettings } from "@/hooks/useGameSettings";
@@ -15,7 +14,6 @@ import { ChessBoard } from "@/components/chess/ChessBoard";
 import { Button } from "@/components/ui/Button";
 import { ConfirmationDialog } from "@/components/ui/ConfirmationDialog";
 import { Dialog } from "@/components/ui/Dialog";
-import { FlagIcon, GearIcon, HandshakeIcon } from "@/components/ui/icons";
 import { EngineCoach, EvalBar } from "@/components/game/EngineCoach";
 import { GameControls } from "@/components/game/GameControls";
 import { GameLayout } from "@/components/game/GameLayout";
@@ -67,7 +65,7 @@ export function OnlineGame({ gameId, playerId }: { gameId: string; playerId: str
     <PlayerPanel
       color={color}
       name={color === myColor ? `${players[color]} (you)` : players[color]}
-      active={position.turn === color && !result}
+      active={position.turn === color && !game.paused_at && !result}
       inCheck={position.inCheck && position.turn === color}
       material={online.material}
       clock={online.clock}
@@ -125,6 +123,7 @@ export function OnlineGame({ gameId, playerId }: { gameId: string; playerId: str
             <ConnectionBanner
               connection={online.connection}
               opponentAway={online.opponentAway}
+              reconnectBy={online.reconnectBy}
               opponentName={players[opponentColor]}
             />
             <GameStatus
@@ -133,7 +132,7 @@ export function OnlineGame({ gameId, playerId }: { gameId: string; playerId: str
               inCheck={position.inCheck}
               doubleCheck={online.checkers.length > 1}
               coach={null}
-              paused={false}
+              paused={Boolean(!result && game.paused_at)}
             />
             {(outgoingDraw || online.notice) && (
               <p className="text-xs text-muted" aria-live="polite">
@@ -148,7 +147,7 @@ export function OnlineGame({ gameId, playerId }: { gameId: string; playerId: str
         coach={secret.coach && <EngineCoach {...secret.coach} />}
       />
 
-      {online.pendingPromotion && (
+      {online.pendingPromotion && !game.paused_at && !result && (
         <PromotionDialog
           open
           color={myColor}
@@ -177,16 +176,13 @@ export function OnlineGame({ gameId, playerId }: { gameId: string; playerId: str
                 void online.act("offer_draw");
               }}
             >
-              <HandshakeIcon />
               Offer draw
             </Button>
             <Button onClick={() => setOverlay("settings")}>
-              <GearIcon />
               Settings
             </Button>
           </div>
           <Button variant="danger" block onClick={() => setOverlay("resign")} className="mt-1">
-            <FlagIcon />
             Resign
           </Button>
         </div>
@@ -283,36 +279,45 @@ function ConnectionBanner({
   connection,
   opponentAway,
   opponentName,
+  reconnectBy,
 }: {
   connection: Connection;
   opponentAway: boolean;
   opponentName: string;
+  reconnectBy: number | null;
 }) {
-  const message =
-    connection === "offline"
-      ? "You're offline. Reconnecting when the network returns…"
+  const message = reconnectBy
+    ? opponentAway
+      ? `${opponentName} disconnected. Waiting for them to return.`
+      : "Reconnecting to your game…"
+    : connection === "offline"
+      ? "You’re offline. Reconnecting when the network returns…"
       : connection === "reconnecting"
         ? "Reconnecting…"
         : connection === "connecting"
           ? "Connecting…"
-          : opponentAway
-            ? `${opponentName} disconnected. Their clock keeps running.`
-            : null;
-  if (!message) return null;
-  const warn = connection !== "connected" || opponentAway;
+          : null;
 
   return (
-    <p
-      role="status"
-      className={clsx(
-        "flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-xs",
-        warn ? "border-[#5c4a29] bg-accent-soft/60 text-[#e8b57a]" : "border-line text-muted",
+    <div role="status">
+      {message && (
+        <p className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 rounded-md bg-accent-soft px-3 py-2 text-sm text-[#e8b57a]">
+          <span className="min-w-0 wrap-anywhere">{message}</span>
+          {reconnectBy !== null && <ReconnectCountdown key={reconnectBy} deadline={reconnectBy} />}
+        </p>
       )}
-    >
-      <span aria-hidden className={clsx("size-1.5 animate-pulse rounded-full", warn ? "bg-[#e8b57a]" : "bg-faint")} />
-      {message}
-    </p>
+    </div>
   );
+}
+
+function ReconnectCountdown({ deadline }: { deadline: number }) {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(Date.now()), 250);
+    return () => window.clearInterval(timer);
+  }, []);
+  const seconds = Math.min(30, Math.max(0, Math.ceil((deadline - now) / 1000)));
+  return <span role="timer" aria-live="off" className="shrink-0 font-semibold tabular-nums">{seconds}s</span>;
 }
 
 function GameLoading({ error, onBack }: { error: string | null; onBack: () => void }) {

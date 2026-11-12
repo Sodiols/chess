@@ -1,7 +1,7 @@
 import { callRpc, readBody, withPlayer } from "@/lib/multiplayer/http";
 import { findOnlineTimeControl } from "@/lib/multiplayer/timeControls";
 
-/** Enter the queue, or heartbeat an existing search. */
+/** Enter the queue for up to 30 seconds. */
 export function POST(request: Request) {
   return withPlayer(request, async (userId, admin) => {
     const { initialMs, incrementMs } = await readBody(request);

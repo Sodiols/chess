@@ -45,9 +45,10 @@ export type DrawReason =
   | "fifty-move-rule"
   | "insufficient-material"
   | "agreement"
-  | "timeout-insufficient-material";
+  | "timeout-insufficient-material"
+  | "mutual-disconnect";
 
-export type WinReason = "checkmate" | "resignation" | "timeout";
+export type WinReason = "checkmate" | "resignation" | "timeout" | "disconnect";
 
 export type GameResult =
   | { kind: "win"; winner: Color; reason: WinReason }

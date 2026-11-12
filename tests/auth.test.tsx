@@ -254,9 +254,9 @@ describe("navbar account menu", () => {
     );
     render(<AccountMenu />);
     fireEvent.click(await screen.findByRole("button", { name: /menu_user/ }));
-    expect(screen.getByRole("menuitem", { name: "My Profile" }).getAttribute("href")).toBe("/profile");
-    expect(screen.getByRole("menuitem", { name: "Settings" }).getAttribute("href")).toBe("/profile#settings");
-    fireEvent.click(screen.getByRole("menuitem", { name: "Logout" }));
+    expect(screen.getByRole("link", { name: "My Profile" }).getAttribute("href")).toBe("/profile");
+    expect(screen.getByRole("link", { name: "Settings" }).getAttribute("href")).toBe("/profile#settings");
+    fireEvent.click(screen.getByRole("button", { name: "Logout" }));
     await waitFor(() => expect(auth.signOut).toHaveBeenCalled());
     await waitFor(() => expect(router.push).toHaveBeenCalledWith("/"));
   });

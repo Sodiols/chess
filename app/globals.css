@@ -340,3 +340,8 @@
     animation: none !important;
   }
 }
+
+#main-content,
+main :is(h1, h2, h3)[id] {
+  scroll-margin-top: 5rem;
+}

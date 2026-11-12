@@ -214,7 +214,7 @@ export default function HowToPlayPage() {
     <>
       <Navbar />
 
-      <main className="mx-auto max-w-[80rem] px-4 pt-10 pb-24 sm:px-6 lg:px-8 lg:pt-14">
+      <main id="main-content" tabIndex={-1} className="mx-auto max-w-[80rem] px-4 pt-10 pb-24 sm:px-6 lg:px-8 lg:pt-14">
         <h1 className="animate-enter text-[2.5rem] leading-[1.02] font-extrabold sm:text-[3.5rem]">
           How to play chess
         </h1>

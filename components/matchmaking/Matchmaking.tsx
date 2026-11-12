@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { useRouter } from "next/navigation";
-import { useMatchmaking } from "@/hooks/useMatchmaking";
+import { MATCHMAKING_LIMIT_MS, useMatchmaking } from "@/hooks/useMatchmaking";
 import { onlinePreferences } from "@/lib/multiplayer/preferences";
 import { onlineTimeControlById } from "@/lib/multiplayer/timeControls";
 import { errorMessage, type Profile } from "@/lib/multiplayer/types";
@@ -29,22 +29,29 @@ export function Matchmaking({ profile }: { profile: Profile }) {
     state.status === "matched";
 
   return (
-    <div className="grid items-start gap-12 lg:grid-cols-[minmax(0,32rem)_minmax(0,1fr)] lg:gap-16">
+    <div className="grid items-start gap-8 lg:grid-cols-[minmax(0,32rem)_minmax(0,1fr)] lg:gap-16">
       {searching ? (
         <Searching
           label={preset.label}
-          since={state.status === "searching" ? state.since : null}
+          since={state.status === "matched" ? null : state.since}
+          joining={state.status === "joining"}
           matched={state.status === "matched"}
           onCancel={() => void cancel()}
         />
       ) : (
-        <div className="animate-rise space-y-8">
+        <div className="animate-rise space-y-6 sm:space-y-8">
           <TimeControlPicker
             value={preset.id}
             onChange={(timeControl) =>
               onlinePreferences.update({ timeControl })
             }
           />
+
+          {state.timedOut && (
+            <p role="status" className="rounded-md bg-surface px-4 py-3 text-sm text-ink">
+              No opponent found in 30 seconds. Retry when you’re ready.
+            </p>
+          )}
 
           {state.error && (
             <p
@@ -60,10 +67,14 @@ export function Matchmaking({ profile }: { profile: Profile }) {
               variant="primary"
               size="lg"
               block
-              disabled={Boolean(profile.activeGameId)}
+              disabled={Boolean(profile.activeGameId) || state.cancelling}
               onClick={() => start(preset.control)}
             >
-              Find Opponent · {preset.label}
+              {state.cancelling
+                ? "Ending search…"
+                : state.timedOut
+                  ? `Retry · ${preset.label}`
+                  : `Find Opponent · ${preset.label}`}
             </Button>
             {profile.activeGameId && (
               <p className="mt-3 text-sm text-muted">
@@ -94,11 +105,13 @@ function Searching({
   label,
   since,
   matched,
+  joining,
   onCancel,
 }: {
   label: string;
   since: number | null;
   matched: boolean;
+  joining: boolean;
   onCancel: () => void;
 }) {
   const [now, setNow] = useState(() => Date.now());
@@ -106,35 +119,33 @@ function Searching({
     const timer = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(timer);
   }, []);
-  const seconds = since ? Math.max(0, Math.floor((now - since) / 1000)) : 0;
+  const seconds = since ? Math.min(MATCHMAKING_LIMIT_MS / 1000, Math.max(0, Math.floor((now - since) / 1000))) : 0;
 
   return (
-    <div className="animate-rise" aria-live="polite">
-      <h2 className="flex items-center gap-3 text-[1.75rem] leading-tight font-extrabold sm:text-[2rem]">
-        {!matched && (
-          <span
-            aria-hidden
-            className="size-3 shrink-0 animate-pulse rounded-full bg-accent"
-          />
-        )}
-        {matched ? "Opponent found." : "Searching for opponent…"}
+    <div className="animate-rise">
+      <h2 className="text-balance text-2xl leading-tight font-bold sm:text-[2rem]">
+        {matched ? "Opponent found" : "Searching for an opponent…"}
       </h2>
-      <p className="mt-2 text-[0.9375rem] text-muted">
+      <p role="status" className="mt-2 min-h-10 text-sm leading-relaxed text-muted sm:text-base">
         {matched
-          ? "Setting up the board."
-          : since
-            ? "You’re in the queue."
-            : "Connecting to the queue…"}
+          ? "Opponent found. Setting up the board."
+          : seconds >= 25
+            ? "Still waiting. If this search ends, try again."
+            : seconds >= 15
+              ? "Hang tight. We’re still looking for an opponent."
+              : joining
+                ? "Connecting to the queue…"
+                : "You’re in the queue."}
       </p>
 
-      <dl className="mt-10 grid grid-cols-2 gap-px overflow-hidden rounded-lg bg-line">
-        <div className="bg-surface px-5 py-4">
+      <dl className="mt-5 grid grid-cols-2 gap-px overflow-hidden rounded-lg bg-line">
+        <div className="bg-surface px-4 py-3 sm:px-5 sm:py-4">
           <dt className="text-sm text-muted">Time control</dt>
           <dd className="mt-1 text-[1.75rem] font-bold tabular-nums">
             {label}
           </dd>
         </div>
-        <div className="bg-surface px-5 py-4">
+        <div className="bg-surface px-4 py-3 sm:px-5 sm:py-4">
           <dt className="text-sm text-muted">Waiting</dt>
           <dd className="mt-1 text-[1.75rem] font-bold tabular-nums">
             {Math.floor(seconds / 60)}:{String(seconds % 60).padStart(2, "0")}
@@ -143,7 +154,7 @@ function Searching({
       </dl>
 
       {!matched && (
-        <Button className="mt-8" size="lg" onClick={onCancel}>
+        <Button className="mt-6" size="lg" onClick={onCancel}>
           Cancel search
         </Button>
       )}

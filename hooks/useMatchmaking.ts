@@ -3,109 +3,115 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { TimeControl } from "@/types";
 import { api } from "@/lib/multiplayer/client";
+import type { Profile } from "@/lib/multiplayer/types";
 import { usePlayerEvents } from "./usePlayerEvents";
 
-/** Keeps the queue entry alive (it expires after 45 s) and re-tries the match. */
-const HEARTBEAT_MS = 15_000;
+export const MATCHMAKING_LIMIT_MS = 30_000;
 
-/** Failures worth riding out: the queue entry outlives one missed heartbeat. */
-const TRANSIENT = new Set(["network", "timeout", "try_again"]);
-
-type MatchResponse = { status: "waiting"; since: string } | { status: "matched"; gameId: string } | { status: "idle" };
+type MatchResponse = { status: "waiting" } | { status: "matched"; gameId: string } | { status: "idle" };
 
 export type MatchmakingState =
-  | { status: "idle"; error?: string }
-  | { status: "joining"; control: TimeControl }
+  | { status: "idle"; error?: string; timedOut?: boolean; cancelling?: boolean }
+  | { status: "joining"; control: TimeControl; since: number }
   | { status: "searching"; control: TimeControl; since: number }
   | { status: "matched"; gameId: string };
 
-/**
- * Random matchmaking. The server pairs players atomically; this hook enters the
- * queue, heartbeats it, and reports the game as soon as either the Realtime
- * notification or a heartbeat response says one exists.
- */
+type Attempt = {
+  join: Promise<Awaited<ReturnType<typeof api<MatchResponse>>>>;
+  deadline: number;
+  timer: ReturnType<typeof setTimeout>;
+  stopping: boolean;
+};
+
 export function useMatchmaking(playerId: string | null, onMatched: (gameId: string) => void) {
   const [state, setState] = useState<MatchmakingState>({ status: "idle" });
-  const searching = useRef<TimeControl | null>(null);
-  /** The server has confirmed the queue entry at least once. */
-  const queued = useRef(false);
+  const current = useRef<Attempt | null>(null);
   const matchedRef = useRef(onMatched);
   useEffect(() => {
     matchedRef.current = onMatched;
   });
 
   const finish = useCallback((gameId: string) => {
-    if (!searching.current) return;
-    searching.current = null;
+    const attempt = current.current;
+    if (!attempt) return;
+    clearTimeout(attempt.timer);
+    current.current = null;
     setState({ status: "matched", gameId });
     matchedRef.current(gameId);
   }, []);
 
   usePlayerEvents(playerId, finish);
 
-  const send = useCallback(
-    async (control: TimeControl) => {
-      const result = await api<MatchResponse>("/api/matchmaking", { method: "POST", body: control });
-      if (searching.current !== control) return; // cancelled meanwhile
-      if (!result.ok) {
-        // Mid-search, a blip mustn't drop the player while their queue entry
-        // lives on server-side: the next heartbeat retries.
-        if (queued.current && TRANSIENT.has(result.error)) return;
-        searching.current = null;
-        setState({ status: "idle", error: result.error });
-        return;
-      }
-      if (result.status === "matched") finish(result.gameId);
-      else if (result.status === "waiting") {
-        queued.current = true;
-        setState((current) =>
-          current.status === "searching" ? current : { status: "searching", control, since: Date.parse(result.since) },
-        );
-      }
-    },
-    [finish],
-  );
-
-  const start = useCallback(
-    (control: TimeControl) => {
-      if (searching.current) return; // repeated clicks don't queue twice
-      searching.current = control;
-      queued.current = false;
-      setState({ status: "joining", control });
-      void send(control);
-    },
-    [send],
-  );
-
-  const cancel = useCallback(async () => {
-    if (!searching.current) return;
-    searching.current = null;
-    setState({ status: "idle" });
+  const cancel = useCallback(async (timedOut = false) => {
+    const attempt = current.current;
+    if (!attempt || attempt.stopping) return;
+    attempt.stopping = true;
+    clearTimeout(attempt.timer);
+    setState({ status: "idle", timedOut, cancelling: true });
+    // Order the delete after the original join so a slow join can't recreate the entry.
+    await attempt.join;
     const result = await api<MatchResponse>("/api/matchmaking", { method: "DELETE" });
-    // A match may have landed just before the cancel did.
+    if (current.current !== attempt) return;
     if (result.ok && result.status === "matched") {
-      searching.current = { initialMs: 0, incrementMs: 0 };
       finish(result.gameId);
-    } else if (!result.ok) {
-      // The entry couldn't be removed now; it lapses within 45 seconds anyway.
-      setState({ status: "idle", error: result.error });
+      return;
     }
+    current.current = null;
+    setState({ status: "idle", timedOut, error: !result.ok && !timedOut ? result.error : undefined });
   }, [finish]);
 
-  const active = state.status === "searching" ? state.control : null;
-  useEffect(() => {
-    if (!active) return;
-    const timer = setInterval(() => void send(active), HEARTBEAT_MS);
-    return () => clearInterval(timer);
-  }, [active, send]);
+  const start = useCallback((control: TimeControl) => {
+    if (current.current) return;
+    const since = Date.now();
+    const attempt: Attempt = {
+      join: api<MatchResponse>("/api/matchmaking", { method: "POST", body: control }),
+      deadline: since + MATCHMAKING_LIMIT_MS,
+      timer: setTimeout(() => void cancel(true), MATCHMAKING_LIMIT_MS),
+      stopping: false,
+    };
+    current.current = attempt;
+    setState({ status: "joining", control, since });
 
-  // Leaving the page mid-search takes the player out of the queue.
-  useEffect(
-    () => () => {
-      if (searching.current) void api("/api/matchmaking", { method: "DELETE" });
-    },
-    [],
-  );
+    void attempt.join.then((result) => {
+      if (current.current !== attempt || attempt.stopping) return;
+      if (result.ok && result.status === "matched") {
+        finish(result.gameId);
+      } else if (result.ok) {
+        setState({ status: "searching", control, since });
+      } else {
+        clearTimeout(attempt.timer);
+        current.current = null;
+        setState({ status: "idle", error: result.error });
+      }
+    });
+  }, [cancel, finish]);
+
+  useEffect(() => {
+    if (state.status !== "searching") return;
+    // Recover a match if its Realtime notification was missed, without renewing the queue.
+    const poll = async () => {
+      const attempt = current.current;
+      if (!attempt || attempt.stopping) return;
+      if (Date.now() >= attempt.deadline) {
+        void cancel(true);
+        return;
+      }
+      const result = await api<{ profile: Profile }>("/api/profile");
+      if (current.current === attempt && result.ok && result.profile.activeGameId) {
+        finish(result.profile.activeGameId);
+      }
+    };
+    const timer = setInterval(poll, 4000);
+    return () => clearInterval(timer);
+  }, [cancel, finish, state.status]);
+
+  useEffect(() => () => {
+    const attempt = current.current;
+    current.current = null;
+    if (!attempt || attempt.stopping) return;
+    clearTimeout(attempt.timer);
+    void attempt.join.then(() => api("/api/matchmaking", { method: "DELETE" }));
+  }, []);
 
   return { state, start, cancel };
 }

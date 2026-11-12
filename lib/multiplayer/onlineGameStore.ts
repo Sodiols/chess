@@ -54,10 +54,15 @@ export class OnlineGameStore {
     return this.game;
   }
 
+  syncClock(serverNow: string, requestStartedAt: number, receivedAt: number): void {
+    // Approximate the server timestamp as the midpoint of the round trip.
+    this.offsetMs = Date.parse(serverNow) - (requestStartedAt + receivedAt) / 2;
+  }
+
   /** Replaces everything with a freshly fetched canonical snapshot. */
   load(snapshot: GameSnapshot, requestStartedAt: number, receivedAt: number): void {
-    // The server read happened roughly halfway through the round trip.
-    this.offsetMs = Date.parse(snapshot.serverNow) - (requestStartedAt + receivedAt) / 2;
+    this.syncClock(snapshot.serverNow, requestStartedAt, receivedAt);
+    if (this.game && snapshot.game.version < this.game.version) return;
     this.game = snapshot.game;
     this.moves = [...snapshot.moves].sort((a, b) => a.ply - b.ply);
     this.pendingMove = null;
@@ -123,7 +128,7 @@ export class OnlineGameStore {
     requestId: string,
   ): { expectedVersion: number } | null {
     const game = this.game;
-    if (!game || game.status !== "active" || this.pendingMove) return null;
+    if (!game || game.status !== "active" || game.paused_at || this.pendingMove) return null;
     if (game.turn !== colorOf(game, this.playerId)) return null;
     if (!this.engine.move(from, to, promotion ?? undefined)) return null;
 
@@ -149,7 +154,7 @@ export class OnlineGameStore {
     if (!game) return null;
     const remaining = { w: game.white_ms, b: game.black_ms };
     if (game.status === "active") {
-      const elapsed = now + this.offsetMs - Date.parse(game.turn_started_at);
+      const elapsed = (game.paused_at ? Date.parse(game.paused_at) : now + this.offsetMs) - Date.parse(game.turn_started_at);
       remaining[game.turn] = Math.max(0, remaining[game.turn] - Math.max(0, elapsed));
     }
     return remaining;
