@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import clsx from "clsx";
+import { PersonalRank, SocialSettings } from "@/components/social/SocialSettings";
 import { Navbar } from "@/components/Navbar";
 import { Button } from "@/components/ui/Button";
 import { Field, FormAlert, Spinner } from "@/components/auth/AuthShell";
@@ -72,6 +73,7 @@ export function ProfileView() {
                   <h1 className="truncate text-[2.25rem] leading-[1.05] font-extrabold sm:text-[3rem]">
                     {state.profile.username ?? "New player"}
                   </h1>
+                  {state.profile.username && <PersonalRank username={state.profile.username} link />}
                   <p className="mt-1.5 text-[0.9375rem] text-muted">
                     Member since{" "}
                     {DATE.format(
@@ -128,6 +130,7 @@ export function ProfileView() {
                   </div>
                 </div>
               </div>
+              {state.profile.username && <SocialSettings username={state.profile.username} />}
             </section>
           </>
         )}

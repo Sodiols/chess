@@ -4,6 +4,8 @@ import type { Color, GameResult } from "@/types";
 import { describeResult, formatDuration } from "@/lib/chess/format";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
+import { RankMark } from "@/components/social/SocialUI";
+import type { RatingChange } from "@/lib/social/types";
 import { ChessPiece } from "@/components/chess/ChessPiece";
 
 interface GameResultDialogProps {
@@ -22,6 +24,7 @@ interface GameResultDialogProps {
   rematchNote?: string;
   onDeclineRematch?: () => void;
   newGameLabel?: string;
+  ranking?: { rating: RatingChange | null; exclusion: string | null } | null;
 }
 
 export function GameResultDialog({
@@ -39,6 +42,7 @@ export function GameResultDialog({
   rematchNote = "Colours swap for the rematch.",
   onDeclineRematch,
   newGameLabel = "New game",
+  ranking,
 }: GameResultDialogProps) {
   const { headline, detail } = describeResult(result, players);
   const fullMoves = Math.ceil(moveCount / 2);
@@ -79,6 +83,18 @@ export function GameResultDialog({
           </dd>
         </div>
       </dl>
+
+      {ranking?.rating ? <div className="mt-4 rounded-md bg-surface p-3" aria-live="polite">
+        <RankMark rating={ranking.rating.rating_after} tier={ranking.rating.rank_after} points={false} />
+        <p className="mt-1 font-semibold tabular-nums">{ranking.rating.rating_before} → {ranking.rating.rating_after}
+          <span className="ml-3 text-sm text-muted">{ranking.rating.rating_change > 0 ? "+" : ""}{ranking.rating.rating_change} rating</span></p>
+        {ranking.rating.rank_before !== ranking.rating.rank_after && <p className="mt-1 text-sm text-accent motion-safe:animate-rise">
+          {ranking.rating.rating_change > 0 ? "Promoted" : "Moved"} to {ranking.rating.rank_after}
+        </p>}
+      </div> : ranking?.exclusion && <p className="mt-4 text-sm text-muted">
+        {ranking.exclusion === "private_minimum_moves" ? "Rating unchanged. Ranked private matches require at least four full moves."
+          : "Rating unchanged. Only two private matches per opponent count in 24 hours."}
+      </p>}
 
       <div className="mt-5 space-y-2">
         <Button

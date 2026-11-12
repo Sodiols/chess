@@ -11,6 +11,9 @@ import { opposite } from "@/lib/chess/engine";
 import { formatTimeControl } from "@/lib/chess/format";
 import { errorMessage } from "@/lib/multiplayer/types";
 import { ChessBoard } from "@/components/chess/ChessBoard";
+import { useSocialQuery } from "@/hooks/useSocialQuery";
+import type { RatingChange } from "@/lib/social/types";
+import { RoomSpectatorControl } from "@/components/social/RoomSpectatorControl";
 import { Button } from "@/components/ui/Button";
 import { ConfirmationDialog } from "@/components/ui/ConfirmationDialog";
 import { Dialog } from "@/components/ui/Dialog";
@@ -40,7 +43,10 @@ export function OnlineGame({ gameId, playerId }: { gameId: string; playerId: str
   const { game, position, myColor, result, opponentId } = online;
   // Owner-only analysis of the confirmed position. It never leaves this browser:
   // nothing here is sent to the API, Realtime or the opponent.
-  const secret = useSecretCoach(position, result !== null, online.awaitingServer);
+  const secret = useSecretCoach(position, result !== null, online.awaitingServer, Boolean(game && !game.ranked));
+  const { result: ranking } = useSocialQuery<{ rating: RatingChange | null; exclusion: string | null }>(
+    game?.ranked && result ? `/api/social/rating?id=${gameId}` : null,
+  );
 
   // Both players are sent to the rematch once the server has created it.
   const rematchId = game?.rematch_game_id ?? null;
@@ -69,6 +75,7 @@ export function OnlineGame({ gameId, playerId }: { gameId: string; playerId: str
       inCheck={position.inCheck && position.turn === color}
       material={online.material}
       clock={online.clock}
+      rating={color === "w" ? game.white_rating_before : game.black_rating_before}
       settings={settings}
     />
   );
@@ -90,7 +97,7 @@ export function OnlineGame({ gameId, playerId }: { gameId: string; playerId: str
   return (
     <>
       <GameLayout
-        title={game.origin === "room" ? "Private match" : "Online match"}
+        title={`${game.ranked ? "Ranked" : "Casual"} ${game.origin === "room" ? "private" : "online"} match`}
         subtitle={formatTimeControl(game.initial_ms, game.increment_ms)}
         top={panel(opposite(bottomColor))}
         bottom={panel(bottomColor)}
@@ -146,6 +153,8 @@ export function OnlineGame({ gameId, playerId }: { gameId: string; playerId: str
         showMoveHistory={settings.showMoveHistory}
         coach={secret.coach && <EngineCoach {...secret.coach} />}
       />
+
+      {game.room_id && !result && <RoomSpectatorControl gameId={gameId} />}
 
       {online.pendingPromotion && !game.paused_at && !result && (
         <PromotionDialog
@@ -236,6 +245,7 @@ export function OnlineGame({ gameId, playerId }: { gameId: string; playerId: str
       {result && (
         <GameResultDialog
           open={!resultDismissed}
+          ranking={ranking?.ok ? ranking : null}
           result={result}
           players={players}
           moveCount={position.history.length}

@@ -5,6 +5,7 @@ import { SITE_URL } from "@/lib/site";
 const PAGES: { path: string; priority: number }[] = [
   { path: "/", priority: 1 },
   { path: "/play", priority: 0.9 },
+  { path: "/leaderboard", priority: 0.8 },
   { path: "/play/computer", priority: 0.9 },
   { path: "/play/online", priority: 0.8 },
   { path: "/play/rooms", priority: 0.8 },

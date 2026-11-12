@@ -5,6 +5,7 @@ import type { Color, GameSettings, MaterialBalance } from "@/types";
 import type { ChessClock } from "@/lib/clock";
 import { ChessPiece } from "@/components/chess/ChessPiece";
 import { CapturedPieces } from "./CapturedPieces";
+import { RankMark } from "@/components/social/SocialUI";
 import { GameClock } from "./GameClock";
 
 interface PlayerPanelProps {
@@ -14,6 +15,7 @@ interface PlayerPanelProps {
   inCheck: boolean;
   material: MaterialBalance;
   clock: ChessClock | null;
+  rating?: number | null;
   settings: GameSettings;
 }
 
@@ -24,6 +26,7 @@ export function PlayerPanel({
   inCheck,
   material,
   clock,
+  rating,
   settings,
 }: PlayerPanelProps) {
   const lead = color === "w" ? material.advantage : -material.advantage;
@@ -57,6 +60,8 @@ export function PlayerPanel({
             </span>
           )}
         </div>
+
+        {rating != null && <div className="mt-1"><RankMark rating={rating} /></div>}
 
         {settings.showCaptured && (
           <CapturedPieces

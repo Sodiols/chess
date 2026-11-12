@@ -4,6 +4,9 @@ import type { Color, DrawReason, GameResult, PieceSymbol, Square, WinReason } fr
 export interface GameRow {
   id: string;
   origin: "matchmaking" | "room" | "rematch";
+  ranked?: boolean;
+  white_rating_before?: number | null;
+  black_rating_before?: number | null;
   room_id: string | null;
   white_id: string;
   black_id: string;
@@ -61,6 +64,8 @@ export interface RoomSummary {
   hostColor: Color | "random";
   status: "waiting" | "started" | "cancelled" | "expired";
   discoverable: boolean;
+  ranked?: boolean;
+  allowSpectators?: boolean;
   players: 1 | 2;
   expiresAt: string;
   gameId: string | null;

@@ -133,7 +133,7 @@ test("two accounts are paired by random matchmaking", async ({ browser }) => {
   for (const page of [a, b]) await page.getByRole("radio", { name: /30 min/ }).check({ force: true });
 
   await a.getByRole("button", { name: "Find opponent" }).click();
-  await expect(a.getByText("Searching for opponent…")).toBeVisible();
+  await expect(a.getByText("Searching for an opponent…")).toBeVisible();
   await b.getByRole("button", { name: "Find opponent" }).click();
 
   await a.waitForURL(/\/game\//, { timeout: 30_000 });

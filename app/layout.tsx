@@ -1,3 +1,4 @@
+import { PlayerActivity } from "@/components/social/PlayerActivity";
 import type { Metadata, Viewport } from "next";
 import { Manrope, IBM_Plex_Mono } from "next/font/google";
 import { SITE_NAME, SITE_URL } from "@/lib/site";
@@ -47,7 +48,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* Clips the few px the tilted 3D board projects past narrow screens. On a
             wrapper, not body, because body overflow passes to the viewport and phones
             would still zoom out to fit; clip (unlike hidden) keeps sticky working. */}
-        <div className="min-h-dvh overflow-x-clip">{children}</div>
+        <div className="min-h-dvh overflow-x-clip"><PlayerActivity />{children}</div>
       </body>
     </html>
   );

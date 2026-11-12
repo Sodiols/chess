@@ -11,6 +11,7 @@ import { opposite } from "@/lib/chess/engine";
 import { colorName, formatTimeControl } from "@/lib/chess/format";
 import { MODE_DETAILS } from "@/constants/assistance";
 import { ChessBoard } from "@/components/chess/ChessBoard";
+import { BroadcastGame } from "@/components/social/BroadcastGame";
 import { Button } from "@/components/ui/Button";
 import { ConfirmationDialog } from "@/components/ui/ConfirmationDialog";
 import { Dialog } from "@/components/ui/Dialog";
@@ -185,6 +186,9 @@ export function ChessGame({
         showMoveHistory={settings.showMoveHistory}
         coach={secret.coach && <EngineCoach {...secret.coach} />}
       />
+
+      {!config.analysis && <BroadcastGame kind={config.bot ? "computer" : "local"} white={config.players.w} black={config.players.b}
+        history={position.history} clock={clock} result={result} />}
 
       {game.pendingPromotion && (
         <PromotionDialog

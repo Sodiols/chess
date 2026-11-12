@@ -24,9 +24,9 @@ const BLUNDER_PAWNS = 1.5;
  * online move is shown but not yet confirmed, so only official positions are
  * analysed. Everyone else gets `on: false` and the engine never loads.
  */
-export function useSecretCoach(position: Position, canReview: boolean, awaitingServer = false) {
+export function useSecretCoach(position: Position, canReview: boolean, awaitingServer = false, allowed = true) {
   const { isOwner, settings } = useSecretMode();
-  const on = isOwner && settings.enabled;
+  const on = allowed && isOwner && settings.enabled;
   const [reviewPly, setReviewPly] = useState<number | null>(null);
 
   const history = position.history;

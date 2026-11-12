@@ -11,12 +11,12 @@ export function GET(request: Request) {
 
 export function POST(request: Request) {
   return withPlayer(request, async (userId, admin) => {
-    const { name, password, initialMs, incrementMs, color, discoverable } = await readBody(request);
+    const { name, password, initialMs, incrementMs, color, discoverable, ranked, allowSpectators } = await readBody(request);
     const preset = findOnlineTimeControl(initialMs, incrementMs);
     if (!preset) return { ok: false, error: "invalid_time_control" };
     if (typeof name !== "string") return { ok: false, error: "invalid_room_name" };
     if (typeof password !== "string") return { ok: false, error: "invalid_password" };
-    return callRpc(admin, "create_room", {
+    return callRpc(admin, "create_configured_room", {
       p_user: userId,
       p_name: name,
       p_password: password,
@@ -24,6 +24,8 @@ export function POST(request: Request) {
       p_increment: preset.control.incrementMs,
       p_color: color,
       p_discoverable: discoverable !== false,
+      p_ranked: ranked !== false,
+      p_spectators: allowSpectators === true,
     });
   });
 }

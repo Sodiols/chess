@@ -15,6 +15,8 @@ export interface CreateRoomInput {
   incrementMs: number;
   color: "w" | "b" | "random";
   discoverable: boolean;
+  ranked: boolean;
+  allowSpectators: boolean;
 }
 
 export type HostPhase = "restoring" | "idle" | "creating" | "cancelling";

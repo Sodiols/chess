@@ -28,7 +28,11 @@ const auth = {
     return { error: null };
   }),
 };
-const client = { auth, removeAllChannels: vi.fn(async () => []) };
+const client = {
+  auth,
+  realtime: { setAuth: vi.fn(async () => { throw new Error("Realtime unavailable in the auth test"); }) },
+  removeAllChannels: vi.fn(async () => []),
+};
 
 function emit(next: unknown) {
   session = next;

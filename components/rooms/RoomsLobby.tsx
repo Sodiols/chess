@@ -1,6 +1,7 @@
 "use client";
 
 import {
+  Suspense,
   useEffect,
   useId,
   useMemo,
@@ -30,6 +31,9 @@ import { OptionGroup } from "@/components/ui/OptionGroup";
 import { TextField } from "@/components/ui/TextField";
 import { Toggle } from "@/components/ui/Toggle";
 import { TimeControlPicker } from "@/components/multiplayer/TimeControlPicker";
+import { InviteFriends } from "@/components/social/InviteFriends";
+import { PersonalRank } from "@/components/social/SocialSettings";
+import { useSocialQuery } from "@/hooks/useSocialQuery";
 import { ResumeBanner } from "@/components/multiplayer/OnlineGate";
 
 const CODE_PATTERN = /^[A-HJ-NP-Z2-9]{6}$/;
@@ -75,6 +79,7 @@ export function RoomsLobby({ profile }: { profile: Profile }) {
           <p className="mt-1.5 text-[0.9375rem] text-muted">
             Got a room ID from a friend? Enter it with the password.
           </p>
+          {profile.username && <PersonalRank username={profile.username} />}
           <JoinRoomForm initialCode="" onJoined={goToGame} inline />
         </section>
 
@@ -165,6 +170,8 @@ function CreateRoomForm({
   const [password, setPassword] = useState("");
   const [color, setColor] = useState<"w" | "b" | "random">("random");
   const [discoverable, setDiscoverable] = useState(true);
+  const [ranked, setRanked] = useState(true);
+  const [allowSpectators, setAllowSpectators] = useState(false);
   const [passwordError, setPasswordError] = useState<string | null>(null);
   const preset = onlineTimeControlById(prefs.timeControl);
   const passwordId = useId();
@@ -183,6 +190,8 @@ function CreateRoomForm({
       incrementMs: preset.control.incrementMs,
       color,
       discoverable,
+      ranked,
+      allowSpectators,
     });
   };
 
@@ -227,6 +236,10 @@ function CreateRoomForm({
         onChange={(timeControl) => onlinePreferences.update({ timeControl })}
       />
 
+      <Toggle checked={ranked} onChange={setRanked} label="Ranked match"
+        hint="Rating counts after at least 4 full moves, up to two rated private results against the same opponent in 24 hours." />
+      <Toggle checked={allowSpectators} onChange={setAllowSpectators} label="Allow spectators"
+        hint="Eligible friends also need the room password and both players’ consent in account settings." />
       <details className="group rounded-md bg-raised">
         <summary className="flex min-h-12 cursor-pointer list-none items-center gap-3 px-4 py-2.5 select-none [&::-webkit-details-marker]:hidden">
           <span className="min-w-0 flex-1">
@@ -323,6 +336,8 @@ function JoinRoomForm({
   const codeId = useId();
   const passwordId = useId();
   const normalized = code.trim().toUpperCase();
+  const { result: preview } = useSocialQuery<{ room: RoomSummary }>(CODE_PATTERN.test(normalized)
+    ? `/api/social/room?code=${normalized}` : null);
 
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -331,6 +346,7 @@ function JoinRoomForm({
       setError("invalid_room_code");
       return;
     }
+    if (!preview?.ok) return;
     if (!password) {
       setError("password_required");
       return;
@@ -390,6 +406,10 @@ function JoinRoomForm({
           className="h-12 w-full rounded-md border border-line bg-canvas px-3.5 text-base sm:text-[0.9375rem] hover:border-line-strong focus:border-accent focus:outline-none"
         />
       </div>
+      {preview && !preview.ok && <p role="alert" className="text-sm text-danger sm:col-span-3">{errorMessage(preview.error)}</p>}
+      {preview?.ok && <p role="status" className="text-sm text-muted sm:col-span-3">
+        {preview.room.name} · {preview.room.ranked ? "Ranked" : "Casual"} · {preview.room.allowSpectators ? "Spectators allowed" : "Spectators off"}
+      </p>}
       {error && !inline && (
         <p role="alert" className="text-sm text-[#f4aaa1]">
           {errorMessage(error)}
@@ -400,7 +420,7 @@ function JoinRoomForm({
         variant="primary"
         size="lg"
         block={!inline}
-        disabled={busy}
+        disabled={busy || !preview?.ok}
         aria-busy={busy}
       >
         {busy ? "Joining…" : "Join room"}
@@ -478,6 +498,7 @@ function HostedRoom({
 
         <div className="px-6 pt-7 pb-8 sm:px-8">
           <h2 className="text-2xl font-extrabold">Send these to your friend</h2>
+          <p className="mt-2 text-sm text-muted">Hosted by {room.hostName} · {room.ranked ? "Ranked" : "Casual"} · {room.allowSpectators ? "Spectators allowed" : "Spectators off"}</p>
           <dl className="mt-6 grid gap-6 sm:grid-cols-2">
             <div>
               <dt className="text-sm text-muted">Room ID</dt>
@@ -548,6 +569,8 @@ function HostedRoom({
           </div>
         </dl>
       </div>
+
+      {room.status === "waiting" && <Suspense><InviteFriends code={room.code} /></Suspense>}
 
       {unreachable && room.status === "waiting" && (
         <p role="status" className="mt-4 text-sm text-[#f4aaa1]">
@@ -727,6 +750,7 @@ function RoomCard({ room, onJoin }: { room: RoomSummary; onJoin: () => void }) {
       <div className="min-w-0 flex-1">
         <h3 className="flex items-center gap-2 font-bold">
           <span className="truncate">{room.name}</span>
+          <span className="text-xs text-accent">{room.ranked ? "Ranked" : "Casual"}</span>
           <span className="shrink-0 text-xs font-medium text-muted">Password required</span>
         </h3>
         <p className="mt-0.5 truncate text-sm text-muted">

@@ -6,6 +6,7 @@ import { MATCHMAKING_LIMIT_MS, useMatchmaking } from "@/hooks/useMatchmaking";
 import { onlinePreferences } from "@/lib/multiplayer/preferences";
 import { onlineTimeControlById } from "@/lib/multiplayer/timeControls";
 import { errorMessage, type Profile } from "@/lib/multiplayer/types";
+import { PersonalRank } from "@/components/social/SocialSettings";
 import { Button } from "@/components/ui/Button";
 import { ShowcaseBoard } from "@/components/chess/ShowcaseBoard";
 import { OPENINGS } from "@/constants/openings";
@@ -40,6 +41,9 @@ export function Matchmaking({ profile }: { profile: Profile }) {
         />
       ) : (
         <div className="animate-rise space-y-6 sm:space-y-8">
+          <div><p className="font-semibold">Ranked matchmaking</p>
+            {profile.username && <PersonalRank username={profile.username} />}
+          </div>
           <TimeControlPicker
             value={preset.id}
             onChange={(timeControl) =>
