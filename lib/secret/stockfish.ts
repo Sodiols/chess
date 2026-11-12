@@ -33,11 +33,15 @@ export const STRENGTHS: Record<AnalysisStrength, { label: string; movetimeMs: nu
 const MULTI_PV = 3;
 /** Info lines arrive many times a second; React only needs a few. */
 const UPDATE_INTERVAL_MS = 120;
+const STARTUP_TIMEOUT_MS = 15_000;
+const SEARCH_GRACE_MS = 8_000;
+const STOP_TIMEOUT_MS = 5_000;
 
 /** Parses one `info ... pv ...` line. Bound-only scores (mid-aspiration-window) are skipped. */
 export function parseInfo(line: string): (EngineLine & { nodes: number; nps: number; time: number }) | null {
-  if (!line.startsWith("info ") || !line.includes(" pv ") || /\b(lowerbound|upperbound)\b/.test(line)) return null;
-  const tokens = line.split(" ");
+  const tokens = line.trim().split(/\s+/);
+  const pvAt = tokens.indexOf("pv");
+  if (tokens[0] !== "info" || pvAt < 0 || tokens.includes("lowerbound") || tokens.includes("upperbound")) return null;
   const num = (key: string) => {
     const at = tokens.indexOf(key);
     return at === -1 ? NaN : Number(tokens[at + 1]);
@@ -47,10 +51,12 @@ export function parseInfo(line: string): (EngineLine & { nodes: number; nps: num
   const kind = tokens[scoreAt + 1];
   const value = Number(tokens[scoreAt + 2]);
   if (!Number.isFinite(value) || (kind !== "cp" && kind !== "mate")) return null;
-  const pv = tokens.slice(tokens.indexOf("pv") + 1).filter(Boolean);
-  if (pv.length === 0) return null;
+  const pv = tokens.slice(pvAt + 1);
+  const multipv = num("multipv") || 1;
+  if (!Number.isInteger(multipv) || multipv < 1 || multipv > MULTI_PV
+    || pv.length === 0 || pv.some((move) => !/^[a-h][1-8][a-h][1-8][qrbn]?$/.test(move))) return null;
   return {
-    multipv: num("multipv") || 1,
+    multipv,
     depth: num("depth") || 0,
     score: kind === "cp" ? { cp: value } : { mate: value },
     pv,
@@ -82,7 +88,9 @@ export function engineSupported(): boolean {
  */
 export class StockfishClient {
   private worker: Worker;
-  private ready = false;
+  private stage: "uci" | "ready-check" | "ready" | "closed" = "uci";
+  private timeout: ReturnType<typeof setTimeout> | undefined;
+  private stopping = false;
   private hashMb = 16;
   private job: Job | null = null;
   private next: Job | null = null;
@@ -91,9 +99,15 @@ export class StockfishClient {
     // WebAssembly build where available; the (slow) asm.js build otherwise.
     const file = typeof WebAssembly === "object" ? "stockfish-19-lite-single.js" : "stockfish-19-asm.js";
     this.worker = new Worker(`/engine/${file}`);
-    this.worker.onmessage = (event: MessageEvent<string>) => this.receive(String(event.data));
-    this.worker.onerror = () => this.onError("The analysis engine failed to load.");
+    this.worker.onmessage = (event: MessageEvent<unknown>) => {
+      if (typeof event.data !== "string") return;
+      for (const line of event.data.split(/\r?\n/)) this.receive(line.trim());
+    };
+    this.worker.onerror = () => this.fail("The analysis engine could not load or stopped unexpectedly.");
+    this.worker.onmessageerror = () => this.fail("The analysis engine sent an unreadable response.");
+    this.armTimeout(STARTUP_TIMEOUT_MS, "The analysis engine did not become ready.");
     this.send("uci");
+    this.diagnostic("worker created");
   }
 
   /** Analyses `fen`, replacing any search in progress. Returns a function that discards this request. */
@@ -110,35 +124,66 @@ export class StockfishClient {
     this.next = job;
     if (this.job) {
       this.job.cancelled = true;
-      this.send("stop");
+      this.requestStop();
     } else {
       this.startNext();
     }
     return () => {
       job.cancelled = true;
       if (this.next === job) this.next = null;
-      if (this.job === job) this.send("stop");
+      if (this.job === job) this.requestStop();
     };
   }
 
   /** Ends the current search early but keeps (and reports) what it found. */
   stop(): void {
-    if (this.job && !this.job.cancelled) this.send("stop");
+    if (this.job && !this.job.cancelled) this.requestStop();
   }
 
   dispose(): void {
-    if (this.job) this.job.cancelled = true;
+    if (this.stage === "closed") return;
+    this.stage = "closed";
+    clearTimeout(this.timeout);
+    this.job = null;
     this.next = null;
     this.worker.terminate();
   }
 
   private send(command: string) {
-    this.worker.postMessage(command);
+    if (this.stage === "closed") return;
+    try {
+      this.worker.postMessage(command);
+    } catch {
+      this.fail("The browser could not send a command to the analysis engine.");
+    }
+  }
+
+  private diagnostic(event: string) {
+    if (process.env.NODE_ENV === "development") console.debug("[gambit coach]", event);
+  }
+
+  private armTimeout(ms: number, message: string) {
+    clearTimeout(this.timeout);
+    this.timeout = setTimeout(() => this.fail(message), ms);
+  }
+
+  private fail(message: string) {
+    if (this.stage === "closed") return;
+    this.diagnostic(`${this.stage}: ${message}`);
+    this.dispose();
+    this.onError(message);
+  }
+
+  private requestStop() {
+    if (this.stopping) return;
+    this.stopping = true;
+    this.armTimeout(STOP_TIMEOUT_MS, "The analysis engine did not stop.");
+    this.send("stop");
   }
 
   private startNext() {
     const job = this.next;
-    if (!job || !this.ready) return;
+    if (!job || this.stage !== "ready") return;
     this.next = null;
     this.job = job;
     const { hashMb, movetimeMs } = STRENGTHS[job.strength];
@@ -146,14 +191,24 @@ export class StockfishClient {
       this.send(`setoption name Hash value ${hashMb}`);
       this.hashMb = hashMb;
     }
+    this.armTimeout(movetimeMs + SEARCH_GRACE_MS, "The analysis engine did not finish the search.");
     this.send(`position fen ${job.fen}`);
     this.send(`go movetime ${movetimeMs}`);
   }
 
   private receive(line: string) {
-    if (line === "uciok") {
+    if (line === "uciok" && this.stage === "uci") {
+      this.stage = "ready-check";
+      this.diagnostic("UCI initialized");
       this.send(`setoption name MultiPV value ${MULTI_PV}`);
-      this.ready = true;
+      this.send("isready");
+      return;
+    }
+    if (line === "readyok" && this.stage === "ready-check") {
+      this.stage = "ready";
+      clearTimeout(this.timeout);
+      this.diagnostic("ready");
+
       this.startNext();
       return;
     }
@@ -161,7 +216,9 @@ export class StockfishClient {
     const job = this.job;
     if (!job) return;
 
-    if (line.startsWith("bestmove")) {
+    if (line.startsWith("bestmove ")) {
+      clearTimeout(this.timeout);
+      this.stopping = false;
       this.job = null;
       if (!job.cancelled) job.onUpdate({ ...job.update, done: true });
       this.startNext();

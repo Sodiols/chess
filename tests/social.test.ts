@@ -202,6 +202,7 @@ describe("friendship, invitation and spectating", () => {
     expect(await rpc(db, "reply_to_invite", [viewer, invite, "roomsecret", true])).toMatchObject({ ok: false });
     expect(await rpc(db, "reply_to_invite", [guest, invite, "incorrect", true])).toMatchObject({ error: "wrong_password" });
     const { gameId } = await rpc<{ gameId: string }>(db, "reply_to_invite", [guest, invite, "roomsecret", true]);
+    expect(await rpc(db, "reply_to_invite", [guest, invite, "roomsecret", true])).toMatchObject({ ok: true, gameId });
     expect(await rpc(db, "authorize_spectator", [another, gameId, "roomsecret"])).toMatchObject({ error: "watch_unavailable" });
     expect(await rpc(db, "authorize_spectator", [viewer, gameId, null])).toMatchObject({ error: "spectator_password_required" });
     expect(await rpc(db, "authorize_spectator", [viewer, gameId, "incorrect"])).toMatchObject({ error: "wrong_password" });

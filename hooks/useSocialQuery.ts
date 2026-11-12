@@ -25,9 +25,9 @@ export function useSocialQuery<T extends object>(path: string | null, options: {
   const refresh = useCallback(async () => {
     if (!path || !key) return;
     const revision = ++request.current.sequence;
-    const response = await (isPublic ? publicSocial<T>(path) : api<T>(path));
+    const response = await (isPublic ? publicSocial<T>(path) : api<T>(path, { expectedUserId: user ?? undefined }));
     if (revision === request.current.sequence) setResult({ path: key, response });
-  }, [isPublic, key, path]);
+  }, [isPublic, key, path, user]);
 
   useEffect(() => {
     const tracker = request.current;

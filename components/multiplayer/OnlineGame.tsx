@@ -43,7 +43,7 @@ export function OnlineGame({ gameId, playerId }: { gameId: string; playerId: str
   const { game, position, myColor, result, opponentId } = online;
   // Owner-only analysis of the confirmed position. It never leaves this browser:
   // nothing here is sent to the API, Realtime or the opponent.
-  const secret = useSecretCoach(position, result !== null, online.awaitingServer, Boolean(game && !game.ranked));
+  const secret = useSecretCoach(position, result !== null, online.awaitingServer, Boolean(game && (!game.ranked || result)));
   const { result: ranking } = useSocialQuery<{ rating: RatingChange | null; exclusion: string | null }>(
     game?.ranked && result ? `/api/social/rating?id=${gameId}` : null,
   );
@@ -55,7 +55,7 @@ export function OnlineGame({ gameId, playerId }: { gameId: string; playerId: str
   }, [rematchId, router]);
 
   if (!game || !myColor) {
-    return <GameLoading error={online.loadError} onBack={() => router.push("/play")} />;
+    return <GameLoading error={online.loadError} retry={online.retryLoad} onBack={() => router.push("/play")} />;
   }
 
   const players: Record<Color, string> = { w: game.white_name, b: game.black_name };
@@ -127,6 +127,7 @@ export function OnlineGame({ gameId, playerId }: { gameId: string; playerId: str
         }
         status={
           <div className="space-y-1.5">
+            {secret.blockedByMatch && <p className="text-sm text-muted">Engine coaching is available after this ranked match.</p>}
             <ConnectionBanner
               connection={online.connection}
               opponentAway={online.opponentAway}
@@ -330,13 +331,13 @@ function ReconnectCountdown({ deadline }: { deadline: number }) {
   return <span role="timer" aria-live="off" className="shrink-0 font-semibold tabular-nums">{seconds}s</span>;
 }
 
-function GameLoading({ error, onBack }: { error: string | null; onBack: () => void }) {
+function GameLoading({ error, retry, onBack }: { error: string | null; retry: () => void; onBack: () => void }) {
   return (
     <div className="mx-auto flex max-w-md flex-col items-center gap-4 px-4 py-24 text-center">
       {error ? (
         <>
           <p className="text-lg font-semibold">{errorMessage(error)}</p>
-          <Button onClick={onBack}>Back to play</Button>
+          <div className="flex flex-wrap justify-center gap-2"><Button onClick={retry}>Retry loading</Button><Button onClick={onBack}>Back to play</Button></div>
         </>
       ) : (
         <>

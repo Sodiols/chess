@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { getAdminClient, getCaller } from "@/lib/supabase/server";
+import { AuthServiceUnavailable, getAdminClient, getCaller } from "@/lib/supabase/server";
 
 type RpcPayload = { ok: boolean; error?: string; [key: string]: unknown };
 
@@ -9,6 +9,8 @@ const STATUS: Record<string, number> = {
   account_required: 403,
   not_configured: 503,
   setup_incomplete: 503,
+  room_setup_incomplete: 503,
+  auth_unavailable: 503,
   rate_limited: 429,
   try_again: 500,
   not_found: 404,
@@ -24,9 +26,10 @@ const DEV = process.env.NODE_ENV === "development";
 class RpcError extends Error {
   constructor(
     readonly category: "setup" | "database",
-    message: string,
+    readonly rpc: string,
+    readonly code: string,
   ) {
-    super(message);
+    super(`${rpc}: ${code}`);
   }
 }
 
@@ -67,25 +70,31 @@ export async function withPlayer(
     return respond({ ok: false, error: "not_configured" }, requestId);
   }
 
-  const caller = await getCaller(request, admin);
-  if (!caller) {
-    log({ op, requestId, auth: "invalid" });
-    return respond({ ok: false, error: "unauthorized" }, requestId);
-  }
-  if (caller.anonymous && !allowAnonymous) {
-    log({ op, requestId, auth: "anonymous", outcome: "account_required" });
-    return respond({ ok: false, error: "account_required" }, requestId);
-  }
-
+  let auth = "unverified";
   try {
+    const caller = await getCaller(request, admin);
+    if (!caller) {
+      log({ op, requestId, auth: "invalid", status: 401, outcome: "unauthorized" });
+      return respond({ ok: false, error: "unauthorized" }, requestId);
+    }
+    if (caller.anonymous && !allowAnonymous) {
+      log({ op, requestId, auth: "anonymous", status: 403, outcome: "account_required" });
+      return respond({ ok: false, error: "account_required" }, requestId);
+    }
+    auth = "ok";
     const payload = await handler(caller.id, admin);
-    log({ op, requestId, auth: "ok", outcome: payload.ok ? "ok" : payload.error });
-    return respond(payload, requestId);
+    const response = respond(payload, requestId);
+    log({ op, requestId, auth, status: response.status, outcome: payload.ok ? "ok" : payload.error });
+    return response;
   } catch (error) {
-    const category = error instanceof RpcError ? error.category : "server";
-    const detail = error instanceof Error ? error.message : String(error);
-    log({ level: "error", op, requestId, auth: "ok", category, detail });
-    return respond({ ok: false, error: category === "setup" ? "setup_incomplete" : "try_again" }, requestId, detail);
+    const rpc = error instanceof RpcError ? error : null;
+    const category = rpc?.category ?? (error instanceof AuthServiceUnavailable || auth === "unverified" ? "auth" : "server");
+    const code = category === "auth" ? "auth_unavailable" : category === "setup"
+      ? rpc?.rpc === "create_configured_room" ? "room_setup_incomplete" : "setup_incomplete" : "try_again";
+    const response = respond({ ok: false, error: code }, requestId, rpc?.message);
+    log({ level: "error", op, requestId, auth, status: response.status, outcome: code,
+      category, rpc: rpc?.rpc ?? "-", dbCode: rpc?.code ?? "-" });
+    return response;
   }
 }
 
@@ -94,12 +103,17 @@ export async function callRpc(
   name: string,
   args: Record<string, unknown>,
 ): Promise<RpcPayload> {
-  const { data, error } = await admin.rpc(name, args);
+  let { data, error } = await admin.rpc(name, args);
+  // PostgreSQL aborted the whole transaction. Retrying once cannot duplicate a write.
+  if (error && ["40P01", "40001"].includes(error.code)) {
+    await new Promise((resolve) => setTimeout(resolve, 25));
+    ({ data, error } = await admin.rpc(name, args));
+  }
   if (error) {
     // PGRST202: PostgREST doesn't know the function; 42883: Postgres doesn't.
     // Both mean a migration hasn't been applied to this project.
-    const missing = error.code === "PGRST202" || error.code === "42883";
-    throw new RpcError(missing ? "setup" : "database", `${name}: ${error.code ?? ""} ${error.message}`);
+    const missing = ["PGRST202", "42883", "42P01", "42703", "42501"].includes(error.code);
+    throw new RpcError(missing ? "setup" : "database", name, error.code || "unknown");
   }
   return data as RpcPayload;
 }

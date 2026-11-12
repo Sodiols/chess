@@ -38,6 +38,9 @@ Apply each migration once, in order, on the project:
    room previews, invitations, and expiry.
 9. `supabase/migrations/20261113000003_spectating.sql` — activity leases,
    private Presence, spectator sessions and permissions, and maintenance.
+10. `supabase/migrations/20261114000000_stabilize_multiplayer.sql` — consistent room
+    and invitation lock order, repeatable invitation acceptance, versioned
+    draw/rematch changes, and serialized private spectator revocation.
 
 - **Supabase CLI:** `supabase link --project-ref <ref>` then `supabase db push`.
 - **Dashboard:** SQL Editor → paste a file → Run (each file in order).
@@ -46,6 +49,22 @@ Apply them to a test project first. Nothing in this repo touches a database by
 itself, and the migrations preserve existing users, games and rooms. Until the second
 migration runs, account features answer "The server's database is missing
 Gambit's latest migration".
+
+### Read-only deployment diagnostics
+
+Run `npm run db:verify` to check the configured Auth settings and PostgREST API
+surface. An unavailable RPC can mean an unapplied migration, missing grants,
+or a stale PostgREST schema cache. After applying migrations, reload the schema
+with `notify pgrst, 'reload schema';` if the Data API still reports old signatures.
+
+For exact catalog verification, generate the diagnostic query with
+`npm run --silent db:verify -- --sql`. Paste its SQL output into the target
+project's SQL Editor. It compares tables, columns, grants, function bodies
+and signatures, triggers, indexes, constraints, and RLS policies against a
+fresh database built from this checkout. It also checks the migration ledger
+and the `gambit-maintenance` job using a single read-only query. A missing
+ledger entry can occur when a migration was run manually. Review the catalog
+differences before deciding whether any repair is needed.
 
 ## 2. Authentication
 

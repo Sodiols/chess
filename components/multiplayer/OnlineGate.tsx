@@ -36,6 +36,15 @@ export function OnlineGate({ children, bare = false }: OnlineGateProps) {
       router.replace(loginHref(`${pathname}${window.location.search}`));
   }, [pathname, router, state.status]);
 
+  const activeGame = state.status === "ready" ? state.profile.activeGameId : null;
+  useEffect(() => {
+    if (!activeGame || bare) return;
+    const timer = setInterval(() => {
+      if (document.visibilityState === "visible") retry();
+    }, 6000);
+    return () => clearInterval(timer);
+  }, [activeGame, bare, retry]);
+
   if (state.status === "unconfigured") {
     return (
       <Notice title="Online play isn't set up yet">

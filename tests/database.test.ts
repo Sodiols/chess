@@ -364,6 +364,21 @@ describe("authoritative moves", () => {
     expect(resigned.game).toMatchObject({ result: "white", result_reason: "resignation" });
   });
 
+  it("revisions draw and rematch metadata for clients recovering without Realtime", async () => {
+    const { gameId, white, black } = await startGame();
+    const initial = await game(gameId);
+    await rpc(db, "game_action", [gameId, white, "offer_draw"]);
+    expect((await game(gameId)).version).toBe(initial.version + 1);
+    await rpc(db, "game_action", [gameId, black, "decline_draw"]);
+    expect((await game(gameId)).version).toBe(initial.version + 2);
+    await rpc(db, "game_action", [gameId, white, "resign"]);
+    const ended = await game(gameId);
+    await rpc(db, "game_action", [gameId, white, "request_rematch"]);
+    expect((await game(gameId)).version).toBe(ended.version + 1);
+    await rpc(db, "game_action", [gameId, black, "request_rematch"]);
+    expect(await game(gameId)).toMatchObject({ version: ended.version + 2, rematch_game_id: expect.any(String) });
+  });
+
   it("handles draw offers: only the opponent answers, and crossing offers agree", async () => {
     const { gameId, white, black } = await startGame();
     await rpc(db, "game_action", [gameId, white, "offer_draw"]);

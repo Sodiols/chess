@@ -61,9 +61,16 @@ export class OnlineGameStore {
 
   /** Replaces everything with a freshly fetched canonical snapshot. */
   load(snapshot: GameSnapshot, requestStartedAt: number, receivedAt: number): void {
+    const previous = this.game;
+    if (previous && snapshot.game.version < previous.version) return;
     this.syncClock(snapshot.serverNow, requestStartedAt, receivedAt);
-    if (this.game && snapshot.game.version < this.game.version) return;
     this.game = snapshot.game;
+    if (this.pendingMove && previous && snapshot.game.version === previous.version
+      && snapshot.game.status === "active" && !snapshot.game.paused_at && snapshot.game.fen === previous.fen) {
+      // A snapshot taken before the in-flight move committed cannot reject it.
+      this.emit();
+      return;
+    }
     this.moves = [...snapshot.moves].sort((a, b) => a.ply - b.ply);
     this.pendingMove = null;
     this.rebuild();

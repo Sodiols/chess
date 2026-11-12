@@ -5,6 +5,7 @@ import type { AnalysisStrength, SecretSettings } from "@/lib/secret/settings";
 import { STRENGTHS } from "@/lib/secret/stockfish";
 import { useSecretMode } from "@/hooks/useSecretMode";
 import { OptionGroup } from "@/components/ui/OptionGroup";
+import { errorMessage } from "@/lib/multiplayer/types";
 import { Toggle } from "@/components/ui/Toggle";
 
 const SWITCHES: { key: Exclude<keyof SecretSettings, "enabled" | "strength">; label: string }[] = [
@@ -19,7 +20,7 @@ const SWITCHES: { key: Exclude<keyof SecretSettings, "enabled" | "strength">; la
 
 /** Renders nothing unless the server has confirmed the signed-in account is the owner. */
 export function SecretModeSettings() {
-  const { isOwner, settings, update } = useSecretMode();
+  const { isOwner, settings, update, saving, refreshing, saveError } = useSecretMode();
   if (!isOwner) return null;
 
   return (
@@ -29,12 +30,13 @@ export function SecretModeSettings() {
           Secret Mode
         </h3>
         <p className="mt-0.5 text-xs leading-snug text-faint">
-          Advanced chess engine analysis and personal coaching, in every game mode. It runs only in this browser:
-          nothing is sent to the server or to your opponent.
+          Engine analysis runs in this browser during offline play, casual online matches, and post-game review. Live ranked games keep coaching off.
         </p>
       </div>
 
-      <div className="divide-y divide-line border-y border-line">
+      {saving && <p role="status" className="text-xs text-muted">Saving…</p>}
+      {saveError && <p role="alert" className="text-xs text-danger">Could not save. {errorMessage(saveError)}</p>}
+      <fieldset disabled={saving || refreshing} className="divide-y divide-line border-y border-line">
         <Toggle label="Enable Secret Mode" checked={settings.enabled} onChange={(enabled) => update({ enabled })} />
         {SWITCHES.map(({ key, label }) => (
           <Toggle
@@ -45,8 +47,9 @@ export function SecretModeSettings() {
             onChange={(value) => update({ [key]: value })}
           />
         ))}
-      </div>
+      </fieldset>
 
+      <fieldset disabled={saving || refreshing}>
       <OptionGroup<AnalysisStrength>
         legend="Analysis strength"
         columns={3}
@@ -57,6 +60,7 @@ export function SecretModeSettings() {
           label: `${STRENGTHS[value].label} · ${STRENGTHS[value].movetimeMs / 1000}s`,
         }))}
       />
+      </fieldset>
 
       <Link href="/analysis" className="inline-block text-sm font-medium text-accent hover:underline">
         Open the analysis board →

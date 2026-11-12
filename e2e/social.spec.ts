@@ -122,6 +122,52 @@ test("a friend watches confirmed moves and the result of a ranked random match",
   await white.page.locator('[data-square="e4"]').click();
   await expect(spectator.page.getByRole("button", { name: /^White pawn on e4/ })).toBeVisible();
   await resign(black.page);
-  await expect(white.page.getByRole("dialog").getByText(/\+\d+ rating/)).toBeVisible({ timeout: 15_000 });
+  const result = white.page.getByRole("dialog");
+  await expect(result.getByText(/\+\d+ rating/)).toBeVisible({ timeout: 15_000 });
+  const ratingChange = await result.getByText(/\d+ → \d+/).innerText();
+  const settledRating = Number(ratingChange.match(/→\s*(\d+)/)?.[1]);
+  expect(settledRating).toBeGreaterThan(0);
   await expect(spectator.page.getByText(`${white.username} wins`, { exact:true })).toBeVisible();
+
+  await white.page.goto("/leaderboard");
+  await white.page.getByLabel("Username").fill(white.username);
+  await white.page.getByRole("button", { name: "Search" }).click();
+  const row = white.page.getByRole("row").filter({
+    has: white.page.getByRole("link", { name: white.username, exact: true }),
+  });
+  const ratingCell = row.getByRole("cell", { name: new RegExp(`\\b${settledRating.toLocaleString("en-US")}\\b`) });
+  await expect(ratingCell).toBeVisible();
+  await white.page.getByRole("button", { name: /^country$/i }).click();
+  await expect(white.page.getByRole("combobox", { name: "Country" }),
+    "Set a country on both ranked test accounts before running the suite.").toHaveValue(/^[A-Z]{2}$/);
+  await expect(ratingCell).toBeVisible();
+  await white.page.getByRole("button", { name: /^friends$/i }).click();
+  await expect(ratingCell).toBeVisible();
 });
+
+for (const mode of ["computer", "local"] as const) {
+  test(`an accepted friend watches the ${mode} board live`, async ({ browser }) => {
+    test.setTimeout(100_000);
+    const host = await signIn(browser, 0);
+    const viewer = await signIn(browser, 2);
+    await connectFriends(host.page, host.username, viewer.page, viewer.username);
+    await host.page.goto(`/play/${mode}`);
+    if (mode === "computer") {
+      await host.page.getByRole("radio", { name: "Beginner" }).check({ force: true });
+      await host.page.getByRole("radio", { name: "White" }).check({ force: true });
+      await host.page.getByRole("button", { name: "Play computer" }).click();
+    } else {
+      await host.page.getByRole("button", { name: "Start game" }).click();
+    }
+    await host.page.getByRole("button", { name: mode === "computer" ? "Allow friends to spectate" : /Both players agree/ }).click();
+    await expect(host.page.getByRole("button", { name: "Copy spectator link" })).toBeVisible();
+    await viewer.page.goto(`/u/${host.username}`);
+    await viewer.page.getByRole("link", { name: "Spectate", exact: true }).click();
+    await expect(viewer.page.getByRole("region", { name: "Live chessboard" })).toBeVisible();
+    await host.page.getByRole("button", { name: "White pawn on e2" }).click();
+    await host.page.getByRole("button", { name: "e4, empty" }).click();
+    await expect(viewer.page.getByRole("button", { name: /^White pawn on e4/ })).toBeVisible();
+    await host.page.getByRole("button", { name: "Stop sharing" }).click();
+    await expect(viewer.page.getByText("This match is unavailable to watch.")).toBeVisible();
+  });
+}

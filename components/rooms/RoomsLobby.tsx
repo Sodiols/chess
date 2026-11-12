@@ -336,7 +336,7 @@ function JoinRoomForm({
   const codeId = useId();
   const passwordId = useId();
   const normalized = code.trim().toUpperCase();
-  const { result: preview } = useSocialQuery<{ room: RoomSummary }>(CODE_PATTERN.test(normalized)
+  const { result: preview, refresh: refreshPreview } = useSocialQuery<{ room: RoomSummary }>(CODE_PATTERN.test(normalized)
     ? `/api/social/room?code=${normalized}` : null);
 
   const submit = async (event: React.FormEvent) => {
@@ -406,7 +406,11 @@ function JoinRoomForm({
           className="h-12 w-full rounded-md border border-line bg-canvas px-3.5 text-base sm:text-[0.9375rem] hover:border-line-strong focus:border-accent focus:outline-none"
         />
       </div>
-      {preview && !preview.ok && <p role="alert" className="text-sm text-danger sm:col-span-3">{errorMessage(preview.error)}</p>}
+      {CODE_PATTERN.test(normalized) && !preview && <p role="status" className="text-sm text-muted sm:col-span-3">Checking room…</p>}
+      {preview && !preview.ok && <div className="flex flex-wrap items-center gap-2 sm:col-span-3">
+        <p role="alert" className="text-sm text-danger">{errorMessage(preview.error)}</p>
+        <Button size="sm" variant="ghost" onClick={() => void refreshPreview()}>Retry room check</Button>
+      </div>}
       {preview?.ok && <p role="status" className="text-sm text-muted sm:col-span-3">
         {preview.room.name} · {preview.room.ranked ? "Ranked" : "Casual"} · {preview.room.allowSpectators ? "Spectators allowed" : "Spectators off"}
       </p>}

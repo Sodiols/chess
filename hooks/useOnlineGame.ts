@@ -63,7 +63,7 @@ export function useOnlineGame(gameId: string, playerId: string, sound: boolean) 
     do {
       refetchAgain.current = false;
       const startedAt = Date.now();
-      const result = await api<GameSnapshot>(`/api/games/${gameId}`);
+      const result = await api<GameSnapshot>(`/api/games/${gameId}`, { expectedUserId: playerId });
       if (!mounted.current) break;
       if (result.ok) {
         store.load(result, startedAt, Date.now());
@@ -73,7 +73,7 @@ export function useOnlineGame(gameId: string, playerId: string, sound: boolean) 
       }
     } while (refetchAgain.current);
     fetching.current = false;
-  }, [gameId, store]);
+  }, [gameId, playerId, store]);
 
   const applyServer = useCallback(
     (row: GameRow, move: MoveRow | null) => {
@@ -91,14 +91,17 @@ export function useOnlineGame(gameId: string, playerId: string, sound: boolean) 
     if (!supabase) return;
     let cancelled = false;
     let channel: ReturnType<typeof supabase.channel> | null = null;
+    let authRetry: ReturnType<typeof setTimeout> | undefined;
 
-    void (async () => {
-      // First paint comes from HTTP, so the board shows even if Realtime is slow.
-      void resync();
+    const connect = async () => {
+      if (cancelled) return;
       try {
         await supabase.realtime.setAuth();
       } catch {
-        if (!cancelled) setConnection("offline");
+        if (!cancelled) {
+          setConnection(navigator.onLine ? "reconnecting" : "offline");
+          authRetry = setTimeout(() => void connect(), 5000);
+        }
         return;
       }
       if (cancelled) return;
@@ -122,10 +125,17 @@ export function useOnlineGame(gameId: string, playerId: string, sound: boolean) 
             setConnection(navigator.onLine ? "reconnecting" : "offline");
           }
         });
-    })();
+    };
+    // First paint comes from HTTP, so the board shows even if Realtime is slow.
+    const initial = setTimeout(() => {
+      void resync();
+      void connect();
+    }, 0);
 
     return () => {
       cancelled = true;
+      clearTimeout(initial);
+      clearTimeout(authRetry);
       if (channel) void supabase.removeChannel(channel);
     };
   }, [applyServer, gameId, resync]);
@@ -159,7 +169,7 @@ export function useOnlineGame(gameId: string, playerId: string, sound: boolean) 
     let left = false;
     let inFlight: string | null = null;
     const auth = getBrowserClient()?.auth.onAuthStateChange((_event, session) => {
-      accessToken = session?.access_token ?? null;
+      if (session?.user.id === playerId) accessToken = session.access_token;
     });
 
     const heartbeat = async () => {
@@ -170,14 +180,19 @@ export function useOnlineGame(gameId: string, playerId: string, sound: boolean) 
       const response = await api<{ game: GameRow; serverNow: string }>(path, {
         method: "POST",
         body: { sceneId: id, leaving: false },
+        expectedUserId: playerId,
       });
       if (inFlight === id) inFlight = null;
       if (left || sceneId !== id || !response.ok) return;
       const current = store.getGame();
-      if (current && response.game.version > current.version) {
+      if (!current) return;
+      if (response.game.version > current.version) {
         store.syncClock(response.serverNow, startedAt, Date.now());
         // A move recovered through polling needs the complete move list.
         applyServer(response.game, null);
+      } else if (response.game.version === current.version && response.game.draw_offered_by !== current.draw_offered_by) {
+        // Compatibility while the metadata revision migration is rolling out.
+        void resync();
       }
     };
 
@@ -219,7 +234,16 @@ export function useOnlineGame(gameId: string, playerId: string, sound: boolean) 
       window.removeEventListener("online", returnToScene);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [active, applyServer, gameId, store]);
+  }, [active, applyServer, gameId, playerId, resync, store]);
+
+  const awaitingRematch = game?.status === "finished" && !game.rematch_game_id;
+  useEffect(() => {
+    if (!awaitingRematch) return;
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === "visible") void resync();
+    }, 12_000);
+    return () => window.clearInterval(timer);
+  }, [awaitingRematch, resync]);
 
   const ownDeadline = myColor === "w" ? game?.white_reconnect_by : game?.black_reconnect_by;
   const opponentDeadline = myColor === "w" ? game?.black_reconnect_by : game?.white_reconnect_by;
@@ -260,21 +284,22 @@ export function useOnlineGame(gameId: string, playerId: string, sound: boolean) 
       void api<MoveResponse>(`/api/games/${gameId}/action`, {
         method: "POST",
         body: { action: "claim_timeout" },
+        expectedUserId: playerId,
       }).then((result) => {
         if (result.ok) applyServer(result.game, null);
       });
     };
-  }, [applyServer, gameId]);
+  }, [applyServer, gameId, playerId]);
 
   const clockKey = game ? `${game.version}|${game.turn_started_at}|${game.status}` : "";
   useEffect(() => {
-    if (!clock || !clockKey) return;
+    if (!clock || !clockKey || view.pending) return;
     const current = store.getGame();
     const reading = store.clockReading();
     if (!current || !reading) return;
     clock.restore(reading, current.turn);
     if (current.status !== "active" || current.paused_at) clock.stop();
-  }, [clock, clockKey, store]);
+  }, [clock, clockKey, store, view.pending]);
 
   // ---------------------------------------------------------------------------
   // Sounds follow the board, so our moves and the opponent's sound the same.
@@ -325,11 +350,11 @@ export function useOnlineGame(gameId: string, playerId: string, sound: boolean) 
       if (myColor) clock?.moveCompleted(myColor);
 
       const body = { from, to, promotion, expectedVersion: planned.expectedVersion, requestId };
-      let response = await api<MoveResponse>(`/api/games/${gameId}/move`, { method: "POST", body });
+      let response = await api<MoveResponse>(`/api/games/${gameId}/move`, { method: "POST", body, expectedUserId: playerId });
       // The request id makes a retry safe: if the first attempt landed, the
       // server returns that same move instead of playing it twice.
       if (!response.ok && response.error === "network") {
-        response = await api<MoveResponse>(`/api/games/${gameId}/move`, { method: "POST", body });
+        response = await api<MoveResponse>(`/api/games/${gameId}/move`, { method: "POST", body, expectedUserId: playerId });
       }
       if (!mounted.current) return;
       if (response.ok) {
@@ -340,7 +365,7 @@ export function useOnlineGame(gameId: string, playerId: string, sound: boolean) 
       if (response.error !== "stale") setNotice(errorMessage(response.error));
       void resync();
     },
-    [applyServer, clock, gameId, myColor, resync, store],
+    [applyServer, clock, gameId, myColor, playerId, resync, store],
   );
 
   const reject = useCallback(
@@ -387,13 +412,13 @@ export function useOnlineGame(gameId: string, playerId: string, sound: boolean) 
   const act = useCallback(
     async (action: GameAction) => {
       setBusyAction(action);
-      const response = await api<MoveResponse>(`/api/games/${gameId}/action`, { method: "POST", body: { action } });
+      const response = await api<MoveResponse>(`/api/games/${gameId}/action`, { method: "POST", body: { action }, expectedUserId: playerId });
       if (!mounted.current) return;
       setBusyAction(null);
       if (response.ok) applyServer(response.game, null);
       else setNotice(errorMessage(response.error));
     },
-    [applyServer, gameId],
+    [applyServer, gameId, playerId],
   );
 
   const selectedMoves = useMemo(
@@ -416,6 +441,7 @@ export function useOnlineGame(gameId: string, playerId: string, sound: boolean) 
     opponentId,
     result,
     loadError,
+    retryLoad: resync,
     connection,
     reconnectBy: deadline ? Date.parse(deadline) - store.offsetMs : null,
     opponentAway: Boolean(active && opponentDeadline),

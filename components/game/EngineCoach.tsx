@@ -62,7 +62,10 @@ export function EngineCoach({
       {notice ? (
         <p className="mt-2 text-muted">{notice}</p>
       ) : error ? (
-        <p className="mt-2 text-[#f2a79e]">{error}</p>
+        <div className="mt-2 space-y-2">
+          <p role="alert" className="text-[#f2a79e]">{error}</p>
+          <Button size="sm" onClick={onRerun}>Retry engine</Button>
+        </div>
       ) : (
         <>
           <div className="mt-2 flex items-center gap-2">

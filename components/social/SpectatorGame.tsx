@@ -45,8 +45,10 @@ export function SpectatorGame({ id }: { id: string }) {
     if (!viewer) return;
     let cancelled = false;
     void (async () => {
-      const stored = await api<SpectatorSnapshot>(`/api/social/spectate?id=${id}`);
-      const result = stored.ok ? stored : await api("/api/social/spectate", { method: "POST", body: { id, action: "authorize" } });
+      const stored = await api<SpectatorSnapshot>(`/api/social/spectate?id=${id}`, { expectedUserId: viewer });
+      const result = !stored.ok && ["watch_unavailable", "watch_authorization_required"].includes(stored.error)
+        ? await api("/api/social/spectate", { method: "POST", body: { id, action: "authorize" }, expectedUserId: viewer })
+        : stored;
       if (!cancelled) {
         if (stored.ok) setSnapshot(stored);
         setAccess({ viewer, allowed: result.ok, error: result.ok ? undefined : result.error });
@@ -56,13 +58,13 @@ export function SpectatorGame({ id }: { id: string }) {
   }, [generation, id, viewer]);
 
   const sync = useCallback(async () => {
-    if (!allowed) return;
+    if (!allowed || !viewer) return;
     if (inFlight.current) { pending.current = true; return; }
     inFlight.current = true;
     const call = ++request.current.revision;
     do {
       pending.current = false;
-      const response = await api<SpectatorSnapshot>(`/api/social/spectate?id=${id}`);
+      const response = await api<SpectatorSnapshot>(`/api/social/spectate?id=${id}`, { expectedUserId: viewer });
       if (call !== request.current.revision) break;
       if (response.ok) {
         setSnapshot((last) => {
@@ -74,7 +76,7 @@ export function SpectatorGame({ id }: { id: string }) {
       } else setSyncError(response.error);
     } while (pending.current);
     inFlight.current = false;
-  }, [allowed, id]);
+  }, [allowed, id, viewer]);
   useSocialBroadcast(allowed && !syncError ? `watch:${id}` : null, "board_changed", sync);
   useEffect(() => {
     if (!allowed) return;
@@ -100,7 +102,7 @@ export function SpectatorGame({ id }: { id: string }) {
     event.preventDefault();
     if (!viewer || busy) return;
     setBusy(true);
-    const result = await api("/api/social/spectate", { method: "POST", body: { id, action: "authorize", password } });
+    const result = await api("/api/social/spectate", { method: "POST", body: { id, action: "authorize", password }, expectedUserId: viewer });
     setBusy(false);
     setPassword("");
     setAccess({ viewer, allowed: result.ok, error: result.ok ? undefined : result.error });

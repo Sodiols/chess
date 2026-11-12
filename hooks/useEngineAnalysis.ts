@@ -1,23 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from "react";
 import type { AnalysisStrength } from "@/lib/secret/settings";
 import { StockfishClient, engineSupported, type EngineUpdate } from "@/lib/secret/stockfish";
-
-let engine: StockfishClient | null = null;
-let engineError: string | null = null;
-const errorListeners = new Set<(message: string) => void>();
-
-function getEngine(): StockfishClient | null {
-  if (!engineSupported()) return null;
-  engine ??= new StockfishClient((message) => {
-    engineError = message;
-    engine?.dispose();
-    engine = null;
-    for (const listener of errorListeners) listener(message);
-  });
-  return engine;
-}
 
 const noSubscribe = () => () => {};
 
@@ -37,49 +22,63 @@ export function cachedAnalysis(fen: string, strength: AnalysisStrength): EngineU
  */
 export function useEngineAnalysis(fen: string, enabled: boolean, search: boolean, strength: AnalysisStrength) {
   const active = enabled && search;
-  const [update, setUpdate] = useState<EngineUpdate | null>(null);
-  const [error, setError] = useState<string | null>(engineError);
+  const engine = useRef<StockfishClient | null>(null);
+  const [update, setUpdate] = useState<{ key: string; run: number; value: EngineUpdate } | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [run, setRun] = useState(0);
   const key = `${strength} ${fen}`;
   const cached = finished.get(key);
 
   useEffect(() => {
-    if (!active || cached) return;
-    const client = getEngine();
-    if (!client) return;
-    errorListeners.add(setError);
-    const cancel = client.analyze(fen, strength, (next) => {
-      if (next.done && next.lines.length > 0) {
-        if (finished.size >= CACHE_LIMIT) finished.delete(finished.keys().next().value!);
-        finished.set(`${strength} ${next.fen}`, next);
-      }
-      setUpdate(next);
-    });
-    return () => {
-      cancel();
-      errorListeners.delete(setError);
+    if (!active || cached || error || !engineSupported()) return;
+    const fail = (message: string) => {
+      engine.current = null;
+      setError(message);
     };
-  }, [active, cached, fen, strength, run]);
+    let cancelled = false;
+    let cancel: (() => void) | undefined;
+    const start = setTimeout(() => {
+      if (cancelled) return;
+      try {
+        engine.current ??= new StockfishClient(fail);
+        cancel = engine.current.analyze(fen, strength, (value) => {
+          if (value.done && value.lines.length > 0) {
+            if (finished.size >= CACHE_LIMIT) finished.delete(finished.keys().next().value!);
+            finished.set(key, value);
+          }
+          setUpdate({ key, run, value });
+        });
+      } catch {
+        fail("The browser could not start the analysis worker. Check that the engine assets are available.");
+      }
+    }, 0);
+    return () => {
+      cancelled = true;
+      clearTimeout(start);
+      cancel?.();
+    };
+  }, [active, cached, error, fen, key, strength, run]);
 
-  // Turning Secret Mode off (or leaving the board) frees the worker and its memory.
   useEffect(() => {
     if (!enabled) return;
     return () => {
-      engine?.dispose();
-      engine = null;
+      engine.current?.dispose();
+      engine.current = null;
     };
   }, [enabled]);
 
-  const stop = useCallback(() => engine?.stop(), []);
-  /** Searches the current position again, ignoring any finished result. */
+  const stop = useCallback(() => engine.current?.stop(), []);
   const rerun = useCallback(() => {
     finished.delete(key);
-    engineError = null;
+    if (error) {
+      engine.current?.dispose();
+      engine.current = null;
+    }
     setError(null);
     setRun((n) => n + 1);
-  }, [key]);
+  }, [error, key]);
 
-  const current = cached ?? (update && update.fen === fen ? update : null);
+  const current = cached ?? (update?.key === key && update.run === run ? update.value : null);
   // Read after hydration only (the server snapshot says "supported"), so server and client HTML match.
   const supported = useSyncExternalStore(noSubscribe, engineSupported, () => true);
   const problem = supported ? error : "This browser cannot run the analysis engine (Web Workers are unavailable).";

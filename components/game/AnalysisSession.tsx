@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import type { GameConfig } from "@/types";
 import { useSecretMode } from "@/hooks/useSecretMode";
 import { Navbar } from "@/components/Navbar";
+import { Button } from "@/components/ui/Button";
 import { ChessGame } from "./ChessGame";
 
 const CONFIG: GameConfig = {
@@ -18,7 +19,7 @@ const CONFIG: GameConfig = {
 /** The owner's free analysis board. Everyone else sees an ordinary "not here" page. */
 export function AnalysisSession() {
   const router = useRouter();
-  const { isOwner, settings } = useSecretMode();
+  const { isOwner, settings, status, retry } = useSecretMode();
   const [session, setSession] = useState(0);
 
   if (!isOwner) {
@@ -26,7 +27,12 @@ export function AnalysisSession() {
       <>
         <Navbar />
         <main id="main-content" tabIndex={-1} className="mx-auto max-w-md px-6 pt-24 text-center">
-          <h1 className="text-xl font-bold">Page not found</h1>
+          <h1 className="text-xl font-bold">
+            {status === "loading" ? "Checking access…" : status === "migration_missing" ? "Owner database setup incomplete"
+              : status === "unavailable" ? "Could not verify access" : "Page not found"}
+          </h1>
+          {status === "migration_missing" && <p className="mt-2 text-sm text-muted">Apply the Owner Settings migration to this Supabase project.</p>}
+          {(status === "migration_missing" || status === "unavailable") && <Button className="mt-4" onClick={retry}>Retry verification</Button>}
           <p className="mt-2 text-sm text-muted">
             <Link href="/play" className="text-accent hover:underline">
               Play a game

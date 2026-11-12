@@ -23,7 +23,7 @@ export function NotificationBell() {
   });
   if (!id) return null;
   const mark = async (notification: number) => {
-    const response = await api<Inbox>("/api/social/notifications", { method: "POST", body: { id: notification } });
+    const response = await api<Inbox>("/api/social/notifications", { method: "POST", body: { id: notification }, expectedUserId: id });
     setError(response.ok ? null : response.error);
     if (response.ok) void refresh();
   };
@@ -42,7 +42,8 @@ export function NotificationBell() {
       <div className="flex flex-wrap items-center justify-between gap-1"><h2 className="font-bold">Notifications</h2>
         {count > 0 && <Button size="sm" variant="ghost" onClick={() => void mark(0)}>Mark all read</Button>}</div>
       {error && <p role="alert" className="text-sm text-danger">{errorMessage(error)}</p>}
-      {!result ? <p role="status" className="py-3 text-sm text-muted">Loading…</p> : !result.ok ? <p role="alert">{errorMessage(result.error)}</p>
+      {!result ? <p role="status" className="py-3 text-sm text-muted">Loading…</p> : !result.ok ? <div className="space-y-2"><p role="alert">{errorMessage(result.error)}</p>
+          <Button size="sm" onClick={() => void refresh()}>Retry notifications</Button></div>
         : !result.items.length ? <p className="py-3 text-sm text-muted">You’re all caught up.</p> : <ul className="divide-y divide-line">
           {result.items.map((item) => <li key={item.id}><Link href={item.href}
             onClick={() => { if (!item.read_at) void mark(item.id); setOpen(false); }}

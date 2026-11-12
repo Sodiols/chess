@@ -1,91 +1,127 @@
-// Read-only check of a Supabase project against what Gambit needs.
-// Usage: npm run db:verify   (reads .env.local; changes nothing)
-//
-// Reports: auth settings, whether every Gambit database function is deployed
-// (i.e. both migrations ran), and that none is exposed to browser keys.
+import { existsSync, readFileSync, readdirSync } from "node:fs";
 
-import { existsSync } from "node:fs";
-
+if (process.argv.includes("--sql")) {
+  await import("./verify-supabase-catalog.mjs");
+  process.exit(0);
+}
 if (existsSync(".env.local")) process.loadEnvFile(".env.local");
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const publishable = process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 const secret = process.env.SUPABASE_SECRET_KEY;
-
-const MIGRATIONS = {
-  "20261107000000_online_play.sql": [
-    "get_profile", "matchmake", "cancel_matchmaking", "create_room", "room_heartbeat", "join_room",
-    "cancel_room", "list_open_rooms", "get_game_state", "submit_move", "game_action", "run_maintenance",
-  ],
-  "20261108000000_accounts.sql": ["set_username", "username_available", "get_player_stats", "get_hosted_room"],
-  "20261109000000_contact.sql": ["submit_contact"],
+const migrationDir = new URL("../supabase/migrations/", import.meta.url);
+const files = readdirSync(migrationDir).filter((file) => file.endsWith(".sql")).sort();
+// Check every externally called RPC, including read-only social/profile RPCs.
+// Internal functions, exact SQL signatures and grants are checked by --sql.
+const rpcNames = new Set([
+  "get_profile", "matchmake", "cancel_matchmaking", "create_room", "room_heartbeat", "join_room",
+  "cancel_room", "list_open_rooms", "get_game_state", "submit_move", "game_action", "run_maintenance",
+  "set_username", "username_available", "get_player_stats", "get_hosted_room", "submit_contact",
+  "get_owner_settings", "set_owner_settings", "update_game_scene", "create_configured_room", "game_rating_result",
+  "friend_action", "get_notifications", "public_player", "leaderboard", "set_country",
+  "social_settings", "invite_friend", "reply_to_invite", "room_preview",
+  "authorize_spectator", "get_spectator_state", "publish_spectator", "stop_spectator", "set_room_spectators",
+  "update_player_activity", "get_friends", "friend_details", "_join_room",
+]);
+const functions = new Map();
+const tables = new Map();
+for (const file of files) {
+  const sql = readFileSync(new URL(file, migrationDir), "utf8");
+  for (const [, name, args] of sql.matchAll(/create\s+(?:or replace\s+)?function\s+public\.(\w+)\s*\(([^)]*)\)/gi)) {
+    if (rpcNames.has(name)) functions.set(name, { file, args: args.match(/\bp_\w+(?=\s+\w)/g) ?? [] });
+  }
+  for (const [, name] of sql.matchAll(/create\s+table\s+(?:if not exists\s+)?public\.(\w+)/gi)) tables.set(name, file);
+}
+const columns = {
+  "20261108000000_accounts.sql": { player_profiles: ["username"] },
+  "20261112000000_game_reconnect.sql": { chess_games: ["presence_started_at", "white_reconnect_by", "black_reconnect_by", "paused_at"] },
+  "20261113000000_competitive.sql": {
+    chess_games: ["ranked", "white_rating_before", "black_rating_before", "rating_exclusion"],
+    chess_rooms: ["ranked", "allow_spectators"],
+    player_profiles: ["country_code", "country_changed_at"],
+  },
 };
-
 let problems = 0;
 const ok = (message) => console.log(`  ✓ ${message}`);
-const bad = (message) => {
-  problems++;
-  console.log(`  ✗ ${message}`);
-};
+const bad = (message) => { problems++; console.log(`  ✗ ${message}`); };
 const note = (message) => console.log(`  • ${message}`);
-
-async function openapi(key) {
-  const response = await fetch(`${url}/rest/v1/`, { headers: { apikey: key, authorization: `Bearer ${key}` } });
-  if (!response.ok) throw new Error(`HTTP ${response.status}`);
-  const body = await response.json();
-  return new Set(Object.keys(body.paths ?? {}).filter((path) => path.startsWith("/rpc/")).map((path) => path.slice(5)));
-}
+const headers = (key) => ({ apikey: key, ...(!key.startsWith("sb_") && { authorization: `Bearer ${key}` }) });
+const get = (path, key) => fetch(new URL(path, url), {
+  headers: headers(key), signal: AbortSignal.timeout(10_000), redirect: "error",
+});
 
 console.log("\nEnvironment");
-if (!url || !publishable) {
-  bad("NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY not set — online play is disabled");
+if (!url || !publishable || !secret) {
+  bad("Set NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY and SUPABASE_SECRET_KEY.");
   process.exit(1);
 }
 ok(`project ${new URL(url).host}`);
-if (secret) ok("SUPABASE_SECRET_KEY set (server only)");
-else bad("SUPABASE_SECRET_KEY not set — API routes answer not_configured");
+if (secret === publishable) bad("Server and browser keys are identical.");
 for (const [name, value] of Object.entries(process.env)) {
-  if (name.startsWith("NEXT_PUBLIC_") && /^sb_secret_/.test(value ?? "")) bad(`${name} holds a secret key — it would ship to browsers`);
+  if (name.startsWith("NEXT_PUBLIC_") && /^sb_secret_/.test(value ?? "")) bad(`${name} contains a server key.`);
 }
 
 console.log("\nAuthentication");
 try {
-  const settings = await (await fetch(`${url}/auth/v1/settings`, { headers: { apikey: publishable } })).json();
+  const response = await get("/auth/v1/settings", publishable);
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  const settings = await response.json();
   if (settings.external?.email) ok("email sign-in enabled");
-  else bad("email provider disabled — Authentication → Sign In / Providers → Email");
-  if (settings.disable_signup) bad("new sign-ups are disabled — Authentication → Sign In / Providers");
-  else ok("sign-ups allowed");
-  if (settings.mailer_autoconfirm) note("email confirmation is OFF — accounts are usable without verifying their address");
-  else ok("email confirmation required");
-  if (settings.external?.anonymous_users) note("anonymous sign-ins are ON — only needed to upgrade old guests; can be turned off");
-  else ok("anonymous sign-ins off");
+  else bad("email provider disabled or not visible");
+  if (settings.disable_signup === false) ok("sign-ups allowed");
+  else bad("sign-ups disabled or not visible");
+  if (settings.mailer_autoconfirm === false) ok("email confirmation required");
+  else bad("email confirmation disabled or not visible");
 } catch (error) {
-  bad(`couldn't read auth settings: ${error.message}`);
+  bad(`could not verify authentication settings: ${error.message}`);
 }
 
-console.log("\nDatabase functions");
-if (secret) {
-  try {
-    const visible = await openapi(secret);
-    for (const [file, functions] of Object.entries(MIGRATIONS)) {
-      const missing = functions.filter((name) => !visible.has(name));
-      if (missing.length === 0) ok(`${file} applied`);
-      else bad(`${file} not applied (missing ${missing.join(", ")}) — run it in the SQL editor or \`supabase db push\``);
-    }
-    // A read-only function: with the browser key it must be refused.
-    const probe = await fetch(`${url}/rest/v1/rpc/list_open_rooms`, {
-      method: "POST",
-      headers: { apikey: publishable, authorization: `Bearer ${publishable}`, "content-type": "application/json" },
-      body: "{}",
-    });
-    if (probe.ok) bad("list_open_rooms is callable with the publishable key — re-run the migrations to restore grants");
-    else ok(`Gambit functions refuse the publishable key (HTTP ${probe.status})`);
-  } catch (error) {
-    bad(`couldn't read the schema: ${error.message}`);
+console.log("\nData API (read-only schema discovery)");
+try {
+  const response = await get("/rest/v1/", secret);
+  if (!response.ok) throw new Error(`HTTP ${response.status}`);
+  const schema = await response.json();
+  if (!schema.paths || !schema.definitions) throw new Error("OpenAPI paths or definitions missing");
+  for (const name of rpcNames) {
+    if (!functions.has(name)) bad(`Verifier contract is missing ${name} in local migrations.`);
   }
-} else {
-  note("skipped (needs SUPABASE_SECRET_KEY)");
+  for (const file of files) {
+    const defects = [];
+    for (const [name, contract] of functions) {
+      if (contract.file !== file) continue;
+      const rpc = schema.paths[`/rpc/${name}`]?.post;
+      if (!rpc) {
+        defects.push(`${name} unavailable to the server key`);
+        continue;
+      }
+      const body = rpc.parameters?.find((p) => p.in === "body")?.schema;
+      const params = body?.properties ?? {};
+      if (Object.keys(params).length !== contract.args.length || contract.args.some((arg) => !(arg in params))) {
+        defects.push(`${name} argument names differ (expected ${contract.args.join(", ")})`);
+      }
+    }
+    for (const [name, source] of tables) {
+      if (source === file && !schema.paths[`/${name}`]) defects.push(`${name} unavailable to the server key`);
+    }
+    for (const [name, expected] of Object.entries(columns[file] ?? {})) {
+      const actual = schema.definitions[name]?.properties ?? {};
+      for (const column of expected) if (!(column in actual)) defects.push(`${name}.${column} missing`);
+    }
+    if (defects.length) bad(`${file}: ${defects.join("; ")}`);
+    else ok(`${file}: declared API tables and RPC arguments visible where applicable`);
+  }
+  // HEAD is safe for this read-only list function and never sends/prints room records.
+  const probe = await fetch(new URL("/rest/v1/rpc/list_open_rooms", url), {
+    method: "HEAD", headers: headers(publishable), signal: AbortSignal.timeout(10_000), redirect: "error",
+  });
+  if (probe.ok) bad("list_open_rooms is accessible using the browser key.");
+  else if ([401, 403, 404].includes(probe.status)) ok(`browser-key list_open_rooms probe denied (HTTP ${probe.status})`);
+  else bad(`browser-key probe inconclusive (HTTP ${probe.status})`);
+} catch (error) {
+  bad(`could not verify Data API contract: ${error.message}`);
 }
 
-console.log(problems ? `\n${problems} problem(s) found.\n` : "\nAll checks passed.\n");
-process.exit(problems ? 1 : 0);
+note("Catalog checks require SQL Editor access. Run npm run db:verify -- --sql and execute its SELECT in the target project.");
+note("Dashboard Realtime settings, email delivery, authenticated behavior and cron execution require separate checks.");
+console.log(problems ? `\n${problems} failure(s) in the API checks.\n` : "\nAPI checks passed. Full production verification is still pending catalog and live flow checks.\n");
+process.exitCode = problems ? 1 : 0;

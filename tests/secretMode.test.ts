@@ -154,8 +154,27 @@ describe("StockfishClient", () => {
     const engine = new StockfishClient(() => {});
     const worker = FakeWorker.last;
     worker.say("uciok");
+    expect(worker.sent).toContain("isready");
+    worker.say("readyok");
     return { engine, worker };
   }
+
+  it("fails if the worker never acknowledges readiness", async () => {
+    vi.useFakeTimers();
+    try {
+      vi.stubGlobal("Worker", FakeWorker);
+      const { StockfishClient } = await import("@/lib/secret/stockfish");
+      const fail = vi.fn();
+      const engine = new StockfishClient(fail);
+      FakeWorker.last.say("uciok");
+      engine.analyze("fen", "quick", vi.fn());
+      expect(FakeWorker.last.sent.some((command) => command.startsWith("go"))).toBe(false);
+      vi.advanceTimersByTime(15_000);
+      expect(fail).toHaveBeenCalledWith("The analysis engine did not become ready.");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 
   it("never reports a stopped search's output for the new position", async () => {
     const { engine, worker } = await client();

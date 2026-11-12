@@ -78,3 +78,16 @@ test("two players alternate on one device", async ({ page }) => {
   await page.getByRole("button", { name: "White knight on g1" }).dragTo(page.getByRole("button", { name: "f3, empty" }));
   await expect(page.getByRole("button", { name: "White knight on f3" })).toBeVisible();
 });
+
+test("protected writes reject signed-out callers with a correlation ID", async ({ request }) => {
+  for (const [path, data] of [
+    ["/api/owner", { settings: { enabled: true } }],
+    ["/api/rooms", { name: "Unauthorized" }],
+    ["/api/social/friend", { action: "request" }],
+  ] as const) {
+    const response = await request.post(path, { data });
+    expect(response.status()).toBe(401);
+    expect(response.headers()["x-request-id"]).toMatch(/^[0-9a-f-]{36}$/);
+    expect(await response.json()).toEqual({ ok: false, error: "unauthorized" });
+  }
+});

@@ -124,6 +124,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   signed_out: "You're signed out. Log in to play online.",
   account_required: "Online play needs a Gambit account. Sign up or log in to continue.",
   not_configured: "Online play isn't configured on this server.",
+  auth_unavailable: "Sign-in verification is temporarily unavailable. Try again.",
+  room_setup_incomplete: "Room setup is incomplete. Apply the Competitive migration and reload the database schema.",
   setup_incomplete:
     "The server's database is missing Gambit's latest migration. The site owner needs to apply supabase/migrations (see SUPABASE.md).",
   rate_limited: "Too many requests. Wait a moment and try again.",

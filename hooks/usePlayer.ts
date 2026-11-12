@@ -22,7 +22,7 @@ export type PlayerState =
  * player's profile can never show under another's session.
  */
 let cache: { userId: string | null; entry: Entry } = { userId: null, entry: { status: "loading" } };
-let inFlight: string | null = null;
+let inFlight: { userId: string } | null = null;
 const listeners = new Set<() => void>();
 
 function set(userId: string, entry: Entry) {
@@ -31,12 +31,16 @@ function set(userId: string, entry: Entry) {
 }
 
 async function load(userId: string, force: boolean) {
-  if (inFlight === userId) return;
+  if (inFlight?.userId === userId) return;
   if (!force && cache.userId === userId && cache.entry.status === "ready") return;
   if (cache.userId !== userId || cache.entry.status === "error") set(userId, { status: "loading" });
-  inFlight = userId;
-  const result = await api<{ profile: Profile }>("/api/profile");
+  const request = { userId };
+  inFlight = request;
+  const result = await api<{ profile: Profile }>("/api/profile", { expectedUserId: userId });
+  if (inFlight !== request) return;
   inFlight = null;
+  if (!result.ok && cache.userId === userId && cache.entry.status === "ready"
+    && ["network", "timeout", "auth_unavailable", "try_again"].includes(result.error)) return;
   if (cache.userId !== userId) return; // signed out or switched meanwhile
   set(userId, result.ok ? { status: "ready", profile: result.profile } : { status: "error", error: result.error });
 }
@@ -53,11 +57,17 @@ const subscribe = (listener: () => void) => {
 export function usePlayer({ revalidate = false }: { revalidate?: boolean } = {}) {
   const auth = useAuth();
   const userId = auth.status === "signed-in" || auth.status === "anonymous" ? auth.user.id : null;
+  const token = auth.status === "signed-in" || auth.status === "anonymous" ? auth.session.access_token : null;
   const snapshot = useSyncExternalStore(subscribe, () => cache, () => cache);
 
   useEffect(() => {
-    if (userId) void load(userId, revalidate);
-  }, [userId, revalidate]);
+    if (userId && token) void load(userId, revalidate);
+    else if (auth.status === "signed-out" && cache.userId) {
+      inFlight = null;
+      cache = { userId: null, entry: { status: "loading" } };
+      for (const listener of listeners) listener();
+    }
+  }, [auth.status, userId, token, revalidate]);
 
   const retry = useCallback(() => {
     if (userId) void load(userId, true);
@@ -67,7 +77,7 @@ export function usePlayer({ revalidate = false }: { revalidate?: boolean } = {})
   const setUsername = useCallback(
     async (username: string): Promise<string | null> => {
       if (!userId) return "signed_out";
-      const result = await api<{ profile: Profile }>("/api/profile", { method: "POST", body: { username } });
+      const result = await api<{ profile: Profile }>("/api/profile", { method: "POST", body: { username }, expectedUserId: userId });
       if (!result.ok) return result.error;
       if (cache.userId === userId) set(userId, { status: "ready", profile: result.profile });
       return null;

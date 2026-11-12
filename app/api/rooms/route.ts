@@ -15,6 +15,7 @@ export function POST(request: Request) {
     const preset = findOnlineTimeControl(initialMs, incrementMs);
     if (!preset) return { ok: false, error: "invalid_time_control" };
     if (typeof name !== "string") return { ok: false, error: "invalid_room_name" };
+    if (color !== "w" && color !== "b" && color !== "random") return { ok: false, error: "invalid_color" };
     if (typeof password !== "string") return { ok: false, error: "invalid_password" };
     return callRpc(admin, "create_configured_room", {
       p_user: userId,

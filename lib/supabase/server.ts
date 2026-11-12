@@ -1,6 +1,8 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { SUPABASE_URL } from "./config";
 
+export class AuthServiceUnavailable extends Error {}
+
 let admin: SupabaseClient | null = null;
 
 /**
@@ -30,6 +32,9 @@ export async function getCaller(
   if (!token) return null;
 
   const { data, error } = await client.auth.getClaims(token);
+  if (error && (error.name === "AuthRetryableFetchError" || (error.status ?? 0) >= 500)) {
+    throw new AuthServiceUnavailable();
+  }
   if (error || !data) return null;
   const { sub, role, is_anonymous } = data.claims;
   if (role !== "authenticated" || typeof sub !== "string") return null;

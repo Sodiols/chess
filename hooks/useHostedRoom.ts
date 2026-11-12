@@ -6,7 +6,7 @@ import type { RoomSummary } from "@/lib/multiplayer/types";
 import { usePlayerEvents } from "./usePlayerEvents";
 
 /** The room expires two minutes after the last heartbeat. */
-const HEARTBEAT_MS = 30_000;
+const HEARTBEAT_MS = 12_000;
 
 export interface CreateRoomInput {
   name: string;
@@ -28,6 +28,7 @@ export type HostPhase = "restoring" | "idle" | "creating" | "cancelling";
  * was typed; after a refresh it can't be shown again (the server has a hash).
  */
 export function useHostedRoom(playerId: string, onStarted: (gameId: string) => void) {
+  const activity = useRef({ revision: 0, mutating: false });
   const [room, setRoom] = useState<RoomSummary | null>(null);
   /** Null when the room was restored and its password is unknown here. */
   const [password, setPassword] = useState<string | null>(null);
@@ -58,7 +59,7 @@ export function useHostedRoom(playerId: string, onStarted: (gameId: string) => v
       setRoom(next);
       startedRef.current(next.gameId);
     } else if (next.status === "waiting") {
-      setRoom(next);
+      setRoom((current) => current?.status === "started" ? current : next);
     } else {
       setRoom(null);
       setPassword(null);
@@ -69,7 +70,7 @@ export function useHostedRoom(playerId: string, onStarted: (gameId: string) => v
   // Restore an open room after a refresh or a return to this page.
   useEffect(() => {
     let cancelled = false;
-    void api<{ room: RoomSummary | null }>("/api/rooms?mine=1").then((result) => {
+    void api<{ room: RoomSummary | null }>("/api/rooms?mine=1", { expectedUserId: playerId }).then((result) => {
       if (cancelled) return;
       if (result.ok && result.room) settle(result.room);
       else if (!result.ok) setError(result.error);
@@ -81,9 +82,13 @@ export function useHostedRoom(playerId: string, onStarted: (gameId: string) => v
   }, [playerId, settle]);
 
   const create = useCallback(async (input: CreateRoomInput) => {
+    if (activity.current.mutating) return;
+    activity.current.mutating = true;
+    activity.current.revision++;
     setPhase("creating");
     setError(null);
-    const result = await api<{ room: RoomSummary }>("/api/rooms", { method: "POST", body: input });
+    const result = await api<{ room: RoomSummary }>("/api/rooms", { method: "POST", body: input, expectedUserId: playerId });
+    activity.current.mutating = false;
     setPhase("idle");
     if (!result.ok) {
       setError(result.error);
@@ -92,15 +97,18 @@ export function useHostedRoom(playerId: string, onStarted: (gameId: string) => v
     setPassword(input.password);
     setUnreachable(false);
     setRoom(result.room);
-  }, []);
+  }, [playerId]);
 
   // The room stays on screen until the server confirms; a failure keeps it
   // (it is still open) and says so, and Cancel can be pressed again.
   const cancel = useCallback(async () => {
-    if (!code) return;
+    if (!code || activity.current.mutating) return;
+    activity.current.mutating = true;
+    activity.current.revision++;
     setPhase("cancelling");
     setError(null);
-    const result = await api<{ room: RoomSummary }>(`/api/rooms/${code}`, { method: "DELETE" });
+    const result = await api<{ room: RoomSummary }>(`/api/rooms/${code}`, { method: "DELETE", expectedUserId: playerId });
+    activity.current.mutating = false;
     setPhase("idle");
     if (result.ok) settle(result.room);
     else if (result.error === "room_not_found") {
@@ -109,16 +117,25 @@ export function useHostedRoom(playerId: string, onStarted: (gameId: string) => v
     } else {
       setError(result.error);
     }
-  }, [code, settle]);
+  }, [code, playerId, settle]);
 
   // Heartbeat keeps the room listed and catches a missed "game started" event.
   useEffect(() => {
     if (!code) return;
+    let closed = false;
+    let pending = false;
+    const tracker = activity.current;
     const beat = async () => {
+      if (closed || pending || tracker.mutating) return;
+      pending = true;
+      const revision = tracker.revision;
       const result = await api<{ room: RoomSummary }>(`/api/rooms/${code}`, {
         method: "POST",
         body: { action: "heartbeat" },
+        expectedUserId: playerId,
       });
+      pending = false;
+      if (closed || tracker.revision !== revision) return;
       if (result.ok) {
         setUnreachable(false);
         settle(result.room);
@@ -138,11 +155,12 @@ export function useHostedRoom(playerId: string, onStarted: (gameId: string) => v
     document.addEventListener("visibilitychange", onVisible);
     window.addEventListener("online", onVisible);
     return () => {
+      closed = true;
       clearInterval(timer);
       document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("online", onVisible);
     };
-  }, [code, settle]);
+  }, [code, playerId, settle]);
 
   return { room, password, phase, error, unreachable, create, cancel };
 }

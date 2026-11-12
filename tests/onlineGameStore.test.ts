@@ -105,6 +105,17 @@ describe("OnlineGameStore", () => {
     expect(refused.getView().position.history).toHaveLength(0);
   });
 
+  it("keeps an in-flight move when a canonical refresh returns the pre-move position", () => {
+    const store = loaded(WHITE, []);
+    store.playOptimistic("e2", "e4", null, "req-1");
+    store.load({ ...server([]), serverNow: new Date(NOW).toISOString() }, NOW, NOW);
+    expect(store.getView().pending).toBe(true);
+    expect(store.getView().position.history.map((move) => move.san)).toEqual(["e4"]);
+    const committed = server(["e4"]);
+    store.apply(committed.game, committed.moves[0]!);
+    expect(store.getView().pending).toBe(false);
+  });
+
   it("will not play for the opponent, out of turn, or after the game ends", () => {
     const black = loaded(BLACK, []);
     expect(black.playOptimistic("e7", "e5", null, "r")).toBeNull();
