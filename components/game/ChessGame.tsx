@@ -134,6 +134,7 @@ export function ChessGame({
           settings={settings}
           assistance={game.assistance}
           interactive={game.isInteractive && !secret.reviewing}
+          computerColor={config.bot?.color}
           onSelect={game.selectSquare}
           onMove={game.attemptMove}
           onClearSelection={game.clearSelection}

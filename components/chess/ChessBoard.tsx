@@ -34,6 +34,8 @@ interface ChessBoardProps {
   settings: GameSettings;
   assistance: AssistanceConfig;
   interactive: boolean;
+  /** Give computer moves more time to travel across the board. */
+  computerColor?: Color;
   onSelect: (square: Square) => void;
   onMove: (from: Square, to: Square) => void;
   onClearSelection: () => void;
@@ -58,6 +60,7 @@ export function ChessBoard({
   settings,
   assistance,
   interactive,
+  computerColor,
   onSelect,
   onMove,
   onClearSelection,
@@ -313,8 +316,8 @@ export function ChessBoard({
                   key={piece.id}
                   className={clsx(
                     "board-piece absolute top-0 left-0 h-[12.5%] w-[12.5%]",
-                    settings.animations &&
-                      "transition-transform duration-[220ms] ease-[cubic-bezier(0.25,0.85,0.35,1)]",
+                    settings.animations && "transition-transform ease-[cubic-bezier(0.25,0.85,0.35,1)]",
+                    settings.animations && (piece.color === computerColor ? "duration-[480ms]" : "duration-[220ms]"),
                     drag?.from === piece.square && "opacity-25",
                   )}
                   style={{ transform: placement(piece.square) }}

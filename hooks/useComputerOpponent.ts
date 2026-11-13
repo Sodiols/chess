@@ -3,9 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { BotConfig, PieceSymbol, Square } from "@/types";
 import { BotClient } from "@/lib/computer/botClient";
-
-/** Below this the reply feels instant and robotic; above it the board waits. */
-const MIN_THINK_MS = 450;
+import { BOT_DIFFICULTIES } from "@/lib/computer/difficulty";
 
 interface BotGame {
   fen: string;
@@ -37,19 +35,22 @@ export function useComputerOpponent(bot: BotConfig | undefined, game: BotGame): 
   useEffect(() => {
     if (!client || !active || !difficulty) return;
     let cancelled = false;
-    const startedAt = Date.now();
+    const startedAt = performance.now();
+    const { replyDelayMs } = BOT_DIFFICULTIES[difficulty];
+    let timer: ReturnType<typeof setTimeout> | undefined;
     const request = client.request(game.fen, difficulty);
 
     void request.promise.then((move) => {
       if (cancelled || !move) return;
-      const wait = Math.max(0, MIN_THINK_MS - (Date.now() - startedAt));
-      setTimeout(() => {
-        if (!cancelled) playRef.current(move.from, move.to, move.promotion);
+      const wait = Math.max(0, replyDelayMs - (performance.now() - startedAt));
+      timer = setTimeout(() => {
+        playRef.current(move.from, move.to, move.promotion);
       }, wait);
     });
 
     return () => {
       cancelled = true;
+      clearTimeout(timer);
       request.cancel();
     };
   }, [active, client, difficulty, game.fen]);

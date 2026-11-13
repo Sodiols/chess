@@ -82,9 +82,8 @@ moves, clocks and RLS are tested against real SQL.
 
 ## Known limitations
 
-- The computer engine is a compact search (Pro reaches about depth 5–6 in two
-  seconds); it plays solid club-level chess, not master strength. Stockfish WASM
-  would be the upgrade path.
+- The computer opponent uses a compact search. Pro searches up to seven plies
+  with a roughly three-second budget.
 - Online boards use the Medium assistance level for both players.
 - Guests from the earlier anonymous version can upgrade by signing up (their
   games stay); this needs anonymous sign-ins still enabled. New visitors use
