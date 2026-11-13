@@ -101,7 +101,7 @@ describe("OnlineGameStore", () => {
 
     const refused = loaded(WHITE, []);
     refused.playOptimistic("d2", "d4", null, "req-x");
-    refused.dropPending();
+    refused.dropPending("req-x");
     expect(refused.getView().position.history).toHaveLength(0);
   });
 
@@ -114,6 +114,19 @@ describe("OnlineGameStore", () => {
     const committed = server(["e4"]);
     store.apply(committed.game, committed.moves[0]!);
     expect(store.getView().pending).toBe(false);
+  });
+
+  it.each(["broadcast", "snapshot"])("keeps the pending move through a metadata-only %s", (source) => {
+    const store = loaded(WHITE, []);
+    store.playOptimistic("e2", "e4", null, "req-1");
+    const update = server([], { version: 1, draw_offered_by: BLACK });
+    if (source === "broadcast") store.apply(update.game, null);
+    else store.load({ ...update, serverNow: new Date(NOW).toISOString() }, NOW, NOW);
+    expect(store.getView().pending).toBe(true);
+    expect(store.getView().position.lastMove?.san).toBe("e4");
+    expect(store.dropPending("another-request")).toBe(false);
+    expect(store.dropPending("req-1")).toBe(true);
+    expect(store.getView().position.lastMove).toBeNull();
   });
 
   it("will not play for the opponent, out of turn, or after the game ends", () => {

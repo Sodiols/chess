@@ -65,9 +65,8 @@ export class OnlineGameStore {
     if (previous && snapshot.game.version < previous.version) return;
     this.syncClock(snapshot.serverNow, requestStartedAt, receivedAt);
     this.game = snapshot.game;
-    if (this.pendingMove && previous && snapshot.game.version === previous.version
-      && snapshot.game.status === "active" && !snapshot.game.paused_at && snapshot.game.fen === previous.fen) {
-      // A snapshot taken before the in-flight move committed cannot reject it.
+    if (this.pendingMove && previous && this.keepsPendingMove(snapshot.game, previous)) {
+      // A refresh with the same board cannot settle the move request.
       this.emit();
       return;
     }
@@ -112,7 +111,7 @@ export class OnlineGameStore {
     if (game.ply === this.moves.length) {
       // A result without a move: resignation, agreement or a flag.
       this.game = game;
-      if (this.pendingMove) {
+      if (this.pendingMove && !this.keepsPendingMove(game, current)) {
         this.pendingMove = null;
         this.rebuild();
       } else {
@@ -145,14 +144,19 @@ export class OnlineGameStore {
   }
 
   /** The server refused our move; show its position again. */
-  dropPending(): void {
-    if (!this.pendingMove) return;
+  dropPending(requestId: string): boolean {
+    if (!this.hasPending(requestId)) return false;
     this.pendingMove = null;
     this.rebuild();
+    return true;
   }
 
-  hasPending(): boolean {
-    return this.pendingMove !== null;
+  hasPending(requestId: string): boolean {
+    return this.pendingMove?.requestId === requestId;
+  }
+
+  private keepsPendingMove(game: GameRow, previous: GameRow): boolean {
+    return game.status === "active" && !game.paused_at && game.ply === previous.ply && game.fen === previous.fen;
   }
 
   /** Remaining time per side right now, as the server would compute it. */

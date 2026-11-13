@@ -21,7 +21,7 @@ import { EngineCoach, EvalBar } from "@/components/game/EngineCoach";
 import { GameControls } from "@/components/game/GameControls";
 import { GameLayout } from "@/components/game/GameLayout";
 import { GameResultDialog } from "@/components/game/GameResultDialog";
-import { GameStatus } from "@/components/game/GameStatus";
+import { OnlineMoveStatus } from "./OnlineMoveStatus";
 import { MobileGameDrawer } from "@/components/game/MobileGameDrawer";
 import { PlayerPanel } from "@/components/game/PlayerPanel";
 import { PromotionDialog } from "@/components/game/PromotionDialog";
@@ -61,6 +61,15 @@ export function OnlineGame({ gameId, playerId }: { gameId: string; playerId: str
   const players: Record<Color, string> = { w: game.white_name, b: game.black_name };
   const backTo = game.origin === "room" ? "/play/rooms" : "/play/online";
   const opponentColor = opposite(myColor);
+  const lastConfirmedMove = position.history[game.ply - 1] ?? null;
+  const phase = result ? "finished"
+    : game.paused_at ? "paused"
+    : online.connection === "offline" ? "offline"
+    : online.awaitingServer ? "sending"
+    : online.myTurn ? "your-turn" : "opponent-turn";
+  const check = !result && !online.awaitingServer && position.inCheck
+    ? online.checkers.length > 1 ? "Double check" : "Check"
+    : null;
   const incomingDraw = game.status === "active" && game.draw_offered_by === opponentId;
   const outgoingDraw = game.status === "active" && game.draw_offered_by === playerId;
   const rematchFromOpponent = game.rematch_requested_by === opponentId;
@@ -71,8 +80,8 @@ export function OnlineGame({ gameId, playerId }: { gameId: string; playerId: str
     <PlayerPanel
       color={color}
       name={color === myColor ? `${players[color]} (you)` : players[color]}
-      active={position.turn === color && !game.paused_at && !result}
-      inCheck={position.inCheck && position.turn === color}
+      active={game.turn === color && !game.paused_at && !result}
+      inCheck={Boolean(check) && game.turn === color}
       material={online.material}
       clock={online.clock}
       rating={color === "w" ? game.white_rating_before : game.black_rating_before}
@@ -133,13 +142,12 @@ export function OnlineGame({ gameId, playerId }: { gameId: string; playerId: str
               reconnectBy={online.reconnectBy}
               opponentName={players[opponentColor]}
             />
-            <GameStatus
-              turn={position.turn}
-              turnName={online.myTurn ? "You" : players[position.turn]}
-              inCheck={position.inCheck}
-              doubleCheck={online.checkers.length > 1}
-              coach={null}
-              paused={Boolean(!result && game.paused_at)}
+            <OnlineMoveStatus
+              phase={phase}
+              opponent={players[opponentColor]}
+              myColor={myColor}
+              lastMove={lastConfirmedMove}
+              check={check}
             />
             {(outgoingDraw || online.notice) && (
               <p className="text-xs text-muted" aria-live="polite">
@@ -301,9 +309,9 @@ function ConnectionBanner({
       ? `${opponentName} disconnected. Waiting for them to return.`
       : "Reconnecting to your game…"
     : connection === "offline"
-      ? "You’re offline. Reconnecting when the network returns…"
+      ? null
       : connection === "reconnecting"
-        ? "Reconnecting…"
+        ? "Connecting live updates. The board also checks the server for moves."
         : connection === "connecting"
           ? "Connecting…"
           : null;

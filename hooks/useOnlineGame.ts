@@ -337,7 +337,7 @@ export function useOnlineGame(gameId: string, playerId: string, sound: boolean) 
   // Moves
   // ---------------------------------------------------------------------------
 
-  const myTurn = Boolean(game && game.status === "active" && !game.paused_at && myColor && position.turn === myColor);
+  const myTurn = Boolean(game && game.status === "active" && !game.paused_at && myColor && game.turn === myColor);
   const isInteractive = myTurn && connection !== "offline" && !view.pending && pendingPromotion === null;
 
   const submit = useCallback(
@@ -353,7 +353,8 @@ export function useOnlineGame(gameId: string, playerId: string, sound: boolean) 
       let response = await api<MoveResponse>(`/api/games/${gameId}/move`, { method: "POST", body, expectedUserId: playerId });
       // The request id makes a retry safe: if the first attempt landed, the
       // server returns that same move instead of playing it twice.
-      if (!response.ok && response.error === "network") {
+      if (!mounted.current) return;
+      if (!response.ok && ["network", "timeout"].includes(response.error) && store.hasPending(requestId)) {
         response = await api<MoveResponse>(`/api/games/${gameId}/move`, { method: "POST", body, expectedUserId: playerId });
       }
       if (!mounted.current) return;
@@ -361,8 +362,10 @@ export function useOnlineGame(gameId: string, playerId: string, sound: boolean) 
         applyServer(response.game, response.move);
         return;
       }
-      store.dropPending();
-      if (response.error !== "stale") setNotice(errorMessage(response.error));
+      if (!store.dropPending(requestId)) return;
+      setNotice(response.error === "stale"
+        ? "The game changed before your move was accepted. Updating the board…"
+        : errorMessage(response.error));
       void resync();
     },
     [applyServer, clock, gameId, myColor, playerId, resync, store],
