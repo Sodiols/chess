@@ -114,10 +114,10 @@ export function SpectatorGame({ id }: { id: string }) {
   return <><Navbar variant="game" /><main id="main-content" tabIndex={-1} className="mx-auto max-w-[70rem] px-4 py-6 sm:px-6">
     <div className="mb-5 flex flex-wrap items-center justify-between gap-2">
       <h1 className="text-2xl font-bold">Spectate match</h1>
-      <Link href="/friends" className="inline-flex min-h-11 items-center text-sm text-accent hover:underline">Leave spectating</Link>
+      <Link href="/spectate" className="inline-flex min-h-11 items-center text-sm text-accent hover:underline">Leave spectating</Link>
     </div>
     {!viewer ? <p>{auth.status === "loading" ? "Loading…" : <Link className="text-accent underline" href={loginHref(`/spectate/${id}`)}>Log in to watch</Link>}</p>
-      : passwordRequired ? <Dialog open onClose={() => router.push("/friends")} title="Enter Room Password">
+      : passwordRequired ? <Dialog open onClose={() => router.push("/spectate")} title="Enter Room Password">
         <form className="space-y-4" onSubmit={permit}>
         <label className="grid gap-1 text-sm">Room Password<input className="min-h-11 rounded-md bg-raised px-3" type="password"
           value={password} maxLength={64} required onChange={(event) => setPassword(event.target.value)} /></label>

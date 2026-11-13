@@ -48,9 +48,10 @@ export function Navbar({ variant = "full" }: NavbarProps) {
         </Link>
 
         {full && (
-          <div className="flex items-center justify-end sm:gap-2">
+          <div className="flex flex-wrap items-center justify-end sm:gap-2">
             <NavLink href="/play" pathname={pathname}>Play</NavLink>
             <NavLink href="/leaderboard" pathname={pathname}>Leaderboard</NavLink>
+            <NavLink href="/spectate" pathname={pathname}>Spectate</NavLink>
             <NavLink href="/friends" pathname={pathname}>Friends</NavLink>
             <span className="hidden xl:inline-flex"><NavLink href="/how-to-play" pathname={pathname}>How to Play</NavLink></span>
           </div>
