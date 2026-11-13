@@ -45,6 +45,9 @@ export async function GET(request: Request, { params }: Context) {
       case "settings":
         return callRpc(admin, "social_settings", { p_user: user, p_settings: null });
       case "spectate": {
+        if (query.get("live") === "1") {
+          return callRpc(admin, "list_live_spectator_games", { p_user: user, p_offset: offset });
+        }
         const roomGame = query.get("roomGame");
         if (uuid(roomGame)) {
           const { data, error } = await admin.from("chess_rooms").select("allow_spectators").eq("host_id",user).eq("game_id",roomGame).maybeSingle();

@@ -151,6 +151,24 @@ describe("competitive rating", () => {
 });
 
 describe("friendship, invitation and spectating", () => {
+  it("lists an eligible live ranked match once, before any spectator joins", async () => {
+    const white = await player(); const black = await player();
+    const viewer = await player(); const stranger = await player();
+    await friends(viewer, white); await friends(viewer, black);
+    await prefs(white); await prefs(black, false);
+    await rpc(db, "matchmake", [white, 180000, 0]);
+    const { gameId } = await rpc<{ gameId: string }>(db, "matchmake", [black, 180000, 0]);
+    const list = (user: string) => rpc(db, "list_live_spectator_games", [user, 0]);
+
+    expect(await list(viewer)).toMatchObject({ games: [] });
+    await prefs(black);
+    expect(await list(viewer)).toMatchObject({ games: [{ id: gameId, kind: "online", ranked: true }] });
+    expect(await list(stranger)).toMatchObject({ games: [] });
+    expect(await list(white)).toMatchObject({ games: [] });
+    await rpc(db, "game_action", [gameId, black, "resign"]);
+    expect(await list(viewer)).toMatchObject({ games: [] });
+  });
+
   it("deduplicates crossed requests, enforces direction and handles decline, cancel and removal", async () => {
     const a = await player(); const b = await player(); const c = await player();
     expect(await rpc(db, "friend_action", [a, a, "request"])).toMatchObject({ ok: false });
@@ -202,6 +220,9 @@ describe("friendship, invitation and spectating", () => {
     expect(await rpc(db, "reply_to_invite", [viewer, invite, "roomsecret", true])).toMatchObject({ ok: false });
     expect(await rpc(db, "reply_to_invite", [guest, invite, "incorrect", true])).toMatchObject({ error: "wrong_password" });
     const { gameId } = await rpc<{ gameId: string }>(db, "reply_to_invite", [guest, invite, "roomsecret", true]);
+    const list = (user: string) => rpc(db, "list_live_spectator_games", [user, 0]);
+    expect(await list(viewer)).toMatchObject({ games: [{ id: gameId, kind: "online", ranked: true }] });
+    expect(await list(another)).toMatchObject({ games: [] });
     expect(await rpc(db, "reply_to_invite", [guest, invite, "roomsecret", true])).toMatchObject({ ok: true, gameId });
     expect(await rpc(db, "authorize_spectator", [another, gameId, "roomsecret"])).toMatchObject({ error: "watch_unavailable" });
     expect(await rpc(db, "authorize_spectator", [viewer, gameId, null])).toMatchObject({ error: "spectator_password_required" });
@@ -216,6 +237,7 @@ describe("friendship, invitation and spectating", () => {
     expect(await rpc(db, "get_spectator_state", [viewer, gameId])).toMatchObject({ error: "watch_authorization_required" });
     await rpc(db, "authorize_spectator", [viewer, gameId, "roomsecret"]);
     await rpc(db, "set_room_spectators", [host, gameId, false]);
+    expect(await list(viewer)).toMatchObject({ games: [] });
     expect(await rpc(db, "get_spectator_state", [viewer, gameId])).toMatchObject({ error: "watch_unavailable" });
   });
 
@@ -225,6 +247,7 @@ describe("friendship, invitation and spectating", () => {
     const board = JSON.stringify({ white: "White", black: "Black", status: "active", moves: [] });
     const before = (await db.query("select count(*) from public.rating_transactions")).rows;
     const { sessionId } = await rpc<{ sessionId: string }>(db, "publish_spectator", [host, null, kind, 1, board]);
+    expect(await rpc(db, "list_live_spectator_games", [viewer, 0])).toMatchObject({ games: [{ id: sessionId, kind }] });
     for (const user of [viewer, second]) {
       expect(await rpc(db, "authorize_spectator", [user, sessionId, null])).toMatchObject({ ok: true });
     }
@@ -232,6 +255,7 @@ describe("friendship, invitation and spectating", () => {
     await rpc(db, "publish_spectator", [host, sessionId, kind, 2, JSON.stringify({ white: "Stale" })]);
     expect(await rpc(db, "get_spectator_state", [viewer, sessionId])).toMatchObject({ kind, viewers: 2, board: { sequence: 3, white: "White" } });
     await db.query("update public.spectator_sessions set last_activity=now()-interval '30 seconds' where id=$1", [sessionId]);
+    expect(await rpc(db, "list_live_spectator_games", [viewer, 0])).toMatchObject({ games: [] });
     expect(await rpc(db, "get_spectator_state", [viewer, sessionId])).toMatchObject({ board: { disconnected: true } });
     expect((await db.query("select count(*) from public.rating_transactions")).rows).toEqual(before);
     await db.query("update public.spectator_sessions set last_activity=now()-interval '16 minutes' where id=$1", [sessionId]);

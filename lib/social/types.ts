@@ -44,6 +44,13 @@ export interface Friend extends FriendDetails { player_id: string; username: str
 export interface Invitation { id: string; host_name: string; name: string; initial_ms: number; increment_ms: number; ranked: boolean }
 export interface FriendsResponse { people: Friend[]; invites: Invitation[] }
 export interface NotificationItem { id: number; kind: string; message: string; href: string; read_at: string | null }
+export interface LiveSpectatorGame {
+  id: string;
+  white: string;
+  black: string;
+  kind: "online" | "local" | "computer";
+  ranked: boolean;
+}
 export interface SpectatorSnapshot {
   kind: "online" | "local" | "computer";
   board: {

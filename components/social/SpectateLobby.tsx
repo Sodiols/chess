@@ -7,23 +7,17 @@ import { useSocialQuery } from "@/hooks/useSocialQuery";
 import { useAuth } from "@/lib/auth/session";
 import { loginHref } from "@/lib/auth/validation";
 import { errorMessage } from "@/lib/multiplayer/types";
-import { activityLabel, type FriendsResponse } from "@/lib/social/types";
-import { useFriendPresence } from "./PlayerActivity";
+import type { LiveSpectatorGame } from "@/lib/social/types";
 import { SocialPage } from "./SocialUI";
 
 export function SpectateLobby() {
   const auth = useAuth();
   const [offset, setOffset] = useState(0);
-  const { result, refresh } = useSocialQuery<FriendsResponse>(
-    auth.status === "signed-in" ? `/api/social/friends?offset=${offset}` : null,
+  const { result, refresh } = useSocialQuery<{ games: LiveSpectatorGame[] }>(
+    auth.status === "signed-in" ? `/api/social/spectate?live=1&offset=${offset}` : null,
     { interval: 12_000 },
   );
-  const friends = result?.ok ? result.people.slice(0, 30) : [];
-  const topics = friends.flatMap(({ presence }) => presence?.topic ? [presence.topic] : []).sort().join(",");
-  useFriendPresence(topics, refresh);
-  const watchable = friends.flatMap(({ player_id, username, presence }) =>
-    presence?.watch ? [{ player_id, username, activity: presence.activity, match: presence.watch }] : [],
-  );
+  const watchable = result?.ok ? result.games.slice(0, 30) : [];
 
   return (
     <SocialPage title="Spectate">
@@ -41,23 +35,28 @@ export function SpectateLobby() {
         <>
           {watchable.length ? (
             <ul className="divide-y divide-line rounded-md bg-surface">
-              {watchable.map(({ player_id, username, activity, match }) => (
-                <li key={player_id} className="flex flex-wrap items-center justify-between gap-2 p-4">
+              {watchable.map(({ id, white, black, kind, ranked }) => (
+                <li key={id} className="flex flex-wrap items-center justify-between gap-2 p-4">
                   <div>
-                    <p className="font-semibold">{username}</p>
-                    <p className="text-sm text-muted">{activityLabel[activity]}</p>
+                    <p className="font-semibold">{white} vs {black}</p>
+                    <p className="text-sm text-muted">{kind === "online" ? ranked ? "Ranked online" : "Casual online" : kind === "computer" ? "Vs computer" : "Local 1v1"}</p>
                   </div>
-                  <Link className="inline-flex min-h-11 items-center rounded-md bg-raised px-4 text-sm font-semibold text-accent hover:underline" href={`/spectate/${match}`}>
-                    Watch match<span className="sr-only"> with {username}</span>
+                  <Link className="inline-flex min-h-11 items-center rounded-md bg-raised px-4 text-sm font-semibold text-accent hover:underline" href={`/spectate/${id}`}>
+                    Watch match<span className="sr-only"> {white} vs {black}</span>
                   </Link>
                 </li>
               ))}
             </ul>
-          ) : <p className="rounded-md bg-surface p-4 text-sm text-muted">No watchable games from these friends right now.</p>}
-          {result?.ok && (offset > 0 || result.people.length > 30) && (
+          ) : <div className="rounded-md bg-surface p-4 text-sm">
+            <p className="font-semibold">No live games available to watch</p>
+            <p className="mt-1 text-muted">Both players must allow friend spectating for an online match to appear. Ranked games also require ranked spectating to be enabled by both players.</p>
+            <Link className="inline-flex min-h-11 items-center text-accent hover:underline" href="/profile#social-settings">Spectating settings</Link>
+            <Button className="ml-2 min-h-11" variant="ghost" onClick={() => void refresh()}>Refresh games</Button>
+          </div>}
+          {result?.ok && (offset > 0 || result.games.length > 30) && (
             <div className="mt-4 flex flex-wrap gap-2">
-              <Button className="min-h-11" disabled={offset === 0} onClick={() => setOffset(offset - 30)}>Previous friends</Button>
-              <Button className="min-h-11" disabled={result.people.length <= 30} onClick={() => setOffset(offset + 30)}>Next friends</Button>
+              <Button className="min-h-11" disabled={offset === 0} onClick={() => setOffset(offset - 30)}>Previous games</Button>
+              <Button className="min-h-11" disabled={result.games.length <= 30} onClick={() => setOffset(offset + 30)}>Next games</Button>
             </div>
           )}
         </>

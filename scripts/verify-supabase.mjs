@@ -21,6 +21,7 @@ const rpcNames = new Set([
   "friend_action", "get_notifications", "public_player", "leaderboard", "set_country",
   "social_settings", "invite_friend", "reply_to_invite", "room_preview",
   "authorize_spectator", "get_spectator_state", "publish_spectator", "stop_spectator", "set_room_spectators",
+  "list_live_spectator_games",
   "update_player_activity", "get_friends", "friend_details", "_join_room",
 ]);
 const functions = new Map();

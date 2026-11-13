@@ -41,6 +41,8 @@ Apply each migration once, in order, on the project:
 10. `supabase/migrations/20261114000000_stabilize_multiplayer.sql` — consistent room
     and invitation lock order, repeatable invitation acceptance, versioned
     draw/rematch changes, and serialized private spectator revocation.
+11. `supabase/migrations/20261114000001_live_spectator_lobby.sql` — live match
+    discovery for the Spectate lobby using the existing spectator permissions.
 
 - **Supabase CLI:** `supabase link --project-ref <ref>` then `supabase db push`.
 - **Dashboard:** SQL Editor → paste a file → Run (each file in order).
