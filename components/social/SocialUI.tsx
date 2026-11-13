@@ -27,11 +27,11 @@ export function Country({ code }: { code: string | null }) {
   </span>;
 }
 
-export function CountrySelect({ value, onChange, label = "Country" }: { value: string; onChange: (value: string) => void; label?: string }) {
+export function CountrySelect({ value, onChange, label = "Country", required = false }: { value: string; onChange: (value: string) => void; label?: string; required?: boolean }) {
   return <label className="grid gap-1.5 text-sm text-muted">
     {label}
-    <select value={value} onChange={(event) => onChange(event.target.value)} className="min-h-11 max-w-full rounded-md bg-raised px-3 text-ink">
-      <option value="">No country selected</option>
+    <select required={required} value={value} onChange={(event) => onChange(event.target.value)} className="min-h-11 max-w-full rounded-md bg-raised px-3 text-ink">
+      <option value="" disabled={required}>{required ? "Select your country" : "No country selected"}</option>
       {countries.map((country) => <option value={country.code} key={country.code}>{country.name}</option>)}
     </select>
   </label>;

@@ -40,17 +40,18 @@ function CountryForm({ initial, refresh }: { initial: string | null; refresh: ()
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const save = async () => {
+    if (!country || busy) return;
     setBusy(true);
-    const response = await api("/api/social/country", { method: "POST", body: { country: country || null } });
+    const response = await api("/api/social/country", { method: "POST", body: { country } });
     setBusy(false);
     setMessage(response.ok ? "Country saved." : socialErrors[response.error] ?? errorMessage(response.error));
     if (response.ok) refresh();
   };
   return <form className="grid max-w-xs gap-3" onSubmit={(event) => { event.preventDefault(); void save(); }}>
-    <CountrySelect value={country} onChange={setCountry} />
+    <CountrySelect value={country} onChange={setCountry} required />
     {country && <Country code={country} />}
     <p className="text-sm text-muted">Country is self-reported and can change once every 30 days.</p>
-    <Button type="submit" disabled={busy || country === (initial ?? "")}>Save country</Button>
+    <Button type="submit" disabled={busy || !country || country === (initial ?? "")}>Save country</Button>
     <p role="status" className="text-sm text-muted">{message}</p>
   </form>;
 }

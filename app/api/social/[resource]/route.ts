@@ -83,7 +83,7 @@ export async function POST(request: Request, { params }: Context) {
           ? callRpc(admin, "friend_action", { p_user: user, p_other: id, p_action: action })
           : invalid;
       case "country":
-        return body.country === null || (typeof body.country === "string" && /^[A-Z]{2}$/.test(body.country))
+        return typeof body.country === "string" && /^[A-Z]{2}$/.test(body.country)
           ? callRpc(admin, "set_country", { p_user: user, p_country: body.country })
           : invalid;
       case "settings": {

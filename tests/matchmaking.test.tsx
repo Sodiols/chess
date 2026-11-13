@@ -19,7 +19,7 @@ it("announces the wait at 15 seconds and offers a fresh search after stopping at
     if (path === "/api/profile") return { ok: true, profile: { activeGameId: null } };
     return { ok: false, error: "not_found" };
   });
-  render(<Matchmaking profile={{ id: "player", nickname: "Player", username: "player", activeGameId: null, createdAt: "" }} />);
+  render(<Matchmaking profile={{ id: "player", nickname: "Player", username: "player", countryCode: "BD", activeGameId: null, createdAt: "" }} />);
 
   await act(async () => fireEvent.click(screen.getByRole("button", { name: /Find Opponent/i })));
   await act(async () => vi.advanceTimersByTimeAsync(14_999));

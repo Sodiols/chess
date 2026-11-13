@@ -77,6 +77,7 @@ export interface Profile {
   nickname: string;
   /** Null only for accounts that still have to choose one. */
   username: string | null;
+  countryCode: string | null;
   activeGameId: string | null;
   createdAt: string;
 }

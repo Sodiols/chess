@@ -70,7 +70,7 @@ export function usePlayer({ revalidate = false }: { revalidate?: boolean } = {})
   }, [auth.status, userId, token, revalidate]);
 
   const retry = useCallback(() => {
-    if (userId) void load(userId, true);
+    if (userId) return load(userId, true);
   }, [userId]);
 
   /** Returns an error code, or null on success. */
