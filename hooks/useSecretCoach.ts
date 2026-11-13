@@ -79,7 +79,6 @@ export function useSecretCoach(position: Position, canReview: boolean, awaitingS
 
   return {
     on,
-    blockedByMatch: !allowed && isOwner && settings.enabled,
     shown,
     reviewing: ply !== null,
     overlay,

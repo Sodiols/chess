@@ -30,7 +30,7 @@ export function SecretModeSettings() {
           Secret Mode
         </h3>
         <p className="mt-0.5 text-xs leading-snug text-faint">
-          Engine analysis runs in this browser during offline play, casual online matches, and post-game review. Live ranked games keep coaching off.
+          Engine analysis runs in this browser during offline play, casual and ranked online matches, and post-game review.
         </p>
       </div>
 

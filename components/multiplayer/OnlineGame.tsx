@@ -27,7 +27,7 @@ import { PlayerPanel } from "@/components/game/PlayerPanel";
 import { PromotionDialog } from "@/components/game/PromotionDialog";
 import { SettingsDialog } from "@/components/game/SettingsDialog";
 
-/** Online boards show legal moves without coaching, for both players alike. */
+/** Both players get the same built-in legal move indicators. */
 const ONLINE_ASSISTANCE = ASSISTANCE.medium;
 const NO_PINS = {};
 
@@ -43,7 +43,7 @@ export function OnlineGame({ gameId, playerId }: { gameId: string; playerId: str
   const { game, position, myColor, result, opponentId } = online;
   // Owner-only analysis of the confirmed position. It never leaves this browser:
   // nothing here is sent to the API, Realtime or the opponent.
-  const secret = useSecretCoach(position, result !== null, online.awaitingServer, Boolean(game && (!game.ranked || result)));
+  const secret = useSecretCoach(position, result !== null, online.awaitingServer, Boolean(game && myColor));
   const { result: ranking } = useSocialQuery<{ rating: RatingChange | null; exclusion: string | null }>(
     game?.ranked && result ? `/api/social/rating?id=${gameId}` : null,
   );
@@ -127,7 +127,6 @@ export function OnlineGame({ gameId, playerId }: { gameId: string; playerId: str
         }
         status={
           <div className="space-y-1.5">
-            {secret.blockedByMatch && <p className="text-sm text-muted">Engine coaching is available after this ranked match.</p>}
             <ConnectionBanner
               connection={online.connection}
               opponentAway={online.opponentAway}
